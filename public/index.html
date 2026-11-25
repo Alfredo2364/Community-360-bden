@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Community 360 | Arquitectura Híbrida Azure SQL + Cosmos DB</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+</head>
+<body>
+  <!-- PANTALLA DE LOGIN (BLOQUEA EL DASHBOARD SI NO HAY SESIÓN JWT) -->
+  <section id="loginView" class="login-screen">
+    <div class="login-card">
+      <div class="brand-badge">COMMUNITY 360 · HYBRID CLOUD</div>
+      <h1>Acceso Analítico</h1>
+      <p class="login-subtitle">
+        Autenticación centralizada contra Azure SQL Database (<code>dbo.admins</code>) y telemetría en vivo con Azure Cosmos DB Serverless.
+      </p>
+      <form id="loginForm" autocomplete="off">
+        <div class="field-group">
+          <label for="loginEmail">Usuario / Correo Administrador</label>
+          <input
+            type="text"
+            id="loginEmail"
+            name="email"
+            placeholder="admin@community360.com"
+            required
+          />
+        </div>
+        <div class="field-group">
+          <label for="loginPassword">Contraseña</label>
+          <input
+            type="password"
+            id="loginPassword"
+            name="password"
+            placeholder="••••••••••••"
+            required
+          />
+        </div>
+        <div id="loginError" class="login-error hidden"></div>
+        <button type="submit" id="loginBtn" class="btn-primary full-width">
+          Iniciar Sesión Segura (JWT)
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- DASHBOARD PRINCIPAL (PROTEGIDO) -->
+  <div id="dashboardView" class="dashboard-wrapper hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo-dot"></span>
+        <div>
+          <div class="topbar-title">COMMUNITY 360</div>
+          <div class="topbar-subtitle">Azure SQL Database + Azure Cosmos DB for NoSQL (Serverless)</div>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div id="wsStatusPill" class="status-pill disconnected">
+          <span class="status-indicator"></span>
+          <span id="wsStatusText">WebSocket: Desconectado</span>
+        </div>
+        <div class="admin-pill">
+          <span id="adminEmailLabel">admin</span>
+        </div>
+        <button id="refreshHistoricalBtn" class="btn-ghost" title="Sincronizar datos históricos">
+          Sincronizar
+        </button>
+        <button id="logoutBtn" class="btn-danger-outline">
+          Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- ========================================================= -->
+      <!-- SECCIÓN A: INDICADORES DINÁMICOS EN TIEMPO REAL (WEBSOCKET) -->
+      <!-- ========================================================= -->
+      <section class="section-block">
+        <div class="section-header">
+          <div>
+            <span class="section-tag">SECCIÓN A · TIEMPO REAL (SOCKET.IO)</span>
+            <h2>Indicadores Dinámicos y Telemetría en Vivo</h2>
+          </div>
+          <!-- Log discreto del último evento recibido por WebSocket -->
+          <div id="liveEventLog" class="live-event-log">
+            <span id="eventBadge" class="event-badge snapshot">SNAPSHOT</span>
+            <span id="eventDescription">Esperando eventos de Cosmos DB...</span>
+            <span id="eventTime" class="event-time">--:--:--</span>
+          </div>
+        </div>
+
+        <!-- KPIs EN VIVO -->
+        <div class="kpi-grid">
+          <article class="kpi-card">
+            <div class="kpi-label">Interacciones Válidas (Cosmos DB)</div>
+            <div id="kpiTotalInteracciones" class="kpi-value">0</div>
+            <div id="kpiPromedioInteracciones" class="kpi-meta">0.00 prom. por participante</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Tasa de Participación Activa</div>
+            <div id="kpiTasaParticipacion" class="kpi-value">0%</div>
+            <div id="kpiUsuariosActivos" class="kpi-meta">0 activos de 0 usuarios SQL</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Índice de Riesgo de Abandono</div>
+            <div id="kpiIndiceRiesgo" class="kpi-value warning">0%</div>
+            <div id="kpiDesgloseRiesgo" class="kpi-meta">0 en riesgo · 0 inactivos</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Usuarios con Interacción en Vivo</div>
+            <div id="kpiUsuariosConInteraccion" class="kpi-value">0</div>
+            <div id="kpiTasaInteraccionDirecta" class="kpi-meta">0% cobertura sobre padrón</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Sentimiento Promedio (Cosmos)</div>
+            <div id="kpiSentimientoPromedio" class="kpi-value">0.000</div>
+            <div id="kpiTotalReacciones" class="kpi-meta">0 reacciones acumuladas</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Padrón Relacional (Azure SQL)</div>
+            <div id="kpiTotalUsuariosSql" class="kpi-value">0</div>
+            <div id="kpiPromedioGlobal" class="kpi-meta">0.00 interacciones / usuario global</div>
+          </article>
+        </div>
+
+        <!-- 3 GRÁFICAS EN TIEMPO REAL (APACHE ECHARTS) -->
+        <div class="charts-grid-realtime">
+          <article class="chart-card">
+            <div class="chart-card-header">
+              <h3>1. Interacciones por Plataforma (Barras en Vivo)</h3>
+              <span class="chart-badge">Recálculo WebSocket</span>
+            </div>
+            <div id="chartRealtimeBars" class="echart-box"></div>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-card-header">
+              <h3>2. Distribución por Tipo de Interacción (Dona en Vivo)</h3>
+              <span class="chart-badge">Recálculo WebSocket</span>
+            </div>
+            <div id="chartRealtimeDonut" class="echart-box"></div>
+          </article>
+
+          <article class="chart-card full-span">
+            <div class="chart-card-header">
+              <h3>3. Mapa de Calor: Intensidad Cruzada Plataforma vs. Tipo de Interacción</h3>
+              <span class="chart-badge">Matriz Dinámica M[p,t]</span>
+            </div>
+            <div id="chartRealtimeHeatmap" class="echart-box-tall"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ========================================================= -->
+      <!-- SECCIÓN B: VISUALIZACIONES HISTÓRICAS Y VISTA 360 (REST)  -->
+      <!-- ========================================================= -->
+      <section class="section-block">
+        <div class="section-header">
+          <div>
+            <span class="section-tag">SECCIÓN B · ANALÍTICA HISTÓRICA HÍBRIDA (API REST + BEARER JWT)</span>
+            <h2>Exploración Relacional, Documental, Calidad ETL y Vista 360</h2>
+          </div>
+        </div>
+
+        <div class="charts-grid-historical">
+          <article class="chart-card">
+            <div class="chart-card-header">
+              <h3>Top Intereses Normalizados (Azure SQL <code>usuario_intereses</code>)</h3>
+              <span class="chart-badge">SQL Relacional</span>
+            </div>
+            <div id="chartHistoricalInterests" class="echart-box"></div>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-card-header">
+              <h3>Usuarios por Plataforma y Estatus (Azure SQL)</h3>
+              <span class="chart-badge">Padrón Depurado</span>
+            </div>
+            <div id="chartHistoricalPlatformStatus" class="echart-box"></div>
+          </article>
+        </div>
+
+        <!-- BUSCADOR DE VISTA 360 HÍBRIDA POR ID_USUARIO -->
+        <article class="panel-card">
+          <div class="panel-header-flex">
+            <div>
+              <h3>Buscador de Vista 360° Híbrida por <code>id_usuario</code></h3>
+              <p class="panel-subtitle">
+                Consulta simultánea en paralelo: Perfil e intereses normalizados en Azure SQL + Historial documental en Azure Cosmos DB.
+              </p>
+            </div>
+            <div class="search-360-bar">
+              <input
+                type="text"
+                id="inputVista360"
+                placeholder="Ej. U000852, U000176, U000004"
+                value="U000852"
+              />
+              <button id="btnBuscar360" class="btn-primary">Consultar Vista 360</button>
+              <button class="btn-chip" data-userid="U000852">U000852 (Con interacción)</button>
+              <button class="btn-chip" data-userid="U000004">U000004 (Anonimizado: consentimiento=no)</button>
+              <button class="btn-chip" data-userid="U000176">U000176 (Multietiqueta)</button>
+            </div>
+          </div>
+
+          <div id="vista360Container" class="vista360-grid"></div>
+        </article>
+
+        <!-- TABLA DE USUARIOS EN RIESGO DE ABANDONO -->
+        <article class="panel-card">
+          <div class="panel-header-flex">
+            <div>
+              <h3>Usuarios en Riesgo de Abandono (Top Prioridad de Retención)</h3>
+              <p class="panel-subtitle">
+                Ranking calculado mediante índice matemático ponderado (inactividad, baja interacción en 30d y sentimiento). Haz clic en un usuario para cargar su Vista 360.
+              </p>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID Usuario</th>
+                  <th>Alias</th>
+                  <th>Plataforma</th>
+                  <th>Interés Principal</th>
+                  <th>Estatus</th>
+                  <th>Mensajes / Reacc. (30d)</th>
+                  <th>Sentimiento</th>
+                  <th>Consentimiento / Ubicación</th>
+                  <th>Índice Riesgo</th>
+                </tr>
+              </thead>
+              <tbody id="tableRiesgoBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- GOBERNANZA ETL: CALIDAD, PRIVACIDAD, CUARENTENA Y BITÁCORA -->
+        <div class="etl-governance-grid">
+          <article class="panel-card">
+            <h3>Resumen de Calidad ETL y Privacidad Obligatoria</h3>
+            <p class="panel-subtitle">
+              Auditoría de depuración ejecutada sobre los CSV reales y registrada en <code>bitacora_etl</code> (Cosmos DB).
+            </p>
+            <div id="etlSummaryMetrics" class="etl-metrics-boxes"></div>
+            <div id="privacyExampleBox" class="privacy-example-box"></div>
+          </article>
+
+          <article class="panel-card">
+            <h3>Inspección de Cuarentena en Cosmos DB (<code>/api/cuarentena</code>)</h3>
+            <p class="panel-subtitle">
+              Registros rechazados sin borrado silencioso (integridad referencial huérfana, duplicados o errores de validación).
+            </p>
+            <div id="cuarentenaReasonsBox" class="reasons-badges"></div>
+            <div class="table-responsive compact-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID Registro</th>
+                    <th>ID Usuario</th>
+                    <th>Origen</th>
+                    <th>Motivo de Rechazo</th>
+                    <th>Línea CSV</th>
+                  </tr>
+                </thead>
+                <tbody id="tableCuarentenaBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

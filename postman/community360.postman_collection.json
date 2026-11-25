@@ -1,0 +1,401 @@
+{
+  "info": {
+    "_postman_id": "c360-hybrid-azure-collection-2026",
+    "name": "Community 360 - Arquitectura Híbrida Azure (SQL + Cosmos DB)",
+    "description": "Colección oficial para demostración en vivo de Community 360: Autenticación JWT contra Azure SQL, Analítica Histórica/Tiempo Real y operaciones CRUD sobre interacciones en Cosmos DB con propagación por WebSocket.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lastInteractionId",
+      "value": "I9900001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Autenticación JWT",
+      "item": [
+        {
+          "name": "GET /api/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/login (Guarda {{token}} automáticamente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "if (res && res.token) {",
+                  "    pm.collectionVariables.set('token', res.token);",
+                  "    pm.environment.set('token', res.token);",
+                  "    console.log('JWT guardado en {{token}}:', res.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@community360.com\",\n  \"password\": \"Admin360!2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/auth/me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/auth/logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Analítica Híbrida & Vista 360",
+      "item": [
+        {
+          "name": "GET /api/analytics/historical",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/historical",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "historical"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/analytics/realtime",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/realtime",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "realtime"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/usuarios",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios?limit=25&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "usuarios"],
+              "query": [
+                { "key": "limit", "value": "25" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/usuarios/:id_usuario/vista-360",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/U000852/vista-360",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "usuarios", "U000852", "vista-360"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/cuarentena",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cuarentena?limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cuarentena"],
+              "query": [
+                { "key": "limit", "value": "25" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/bitacora",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bitacora",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bitacora"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Interacciones en Vivo (Cosmos DB + WebSockets)",
+      "item": [
+        {
+          "name": "GET /api/interacciones",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/interacciones?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interacciones"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/interacciones (Emite WebSocket POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.interaccion && res.interaccion.id_interaccion) {",
+                  "    pm.collectionVariables.set('lastInteractionId', res.interaccion.id_interaccion);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_interaccion\": \"I9900001\",\n  \"id_usuario\": \"U000001\",\n  \"canal\": \"Discord\",\n  \"tipo\": \"comentario\",\n  \"tema\": \"arte_comisiones\",\n  \"texto\": \"Demostración en tiempo real desde Postman hacia Cosmos DB y WebSockets.\",\n  \"sentimiento\": 0.91,\n  \"dispositivo\": \"Escritorio\",\n  \"reacciones_recibidas\": 8,\n  \"etiquetas\": [\"arte\", \"evento\", \"comisiones\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/interacciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interacciones"]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/interacciones/:id (Emite WebSocket PUT)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canal\": \"Telegram\",\n  \"tipo\": \"mensaje\",\n  \"tema\": \"eventos_convenciones\",\n  \"texto\": \"Interacción actualizada desde Postman con recálculo en vivo de Apache ECharts.\",\n  \"sentimiento\": 0.95,\n  \"reacciones_recibidas\": 15,\n  \"etiquetas\": [\"evento\", \"aviso\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/interacciones/{{lastInteractionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interacciones", "{{lastInteractionId}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/interacciones/:id (Emite WebSocket DELETE)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/interacciones/{{lastInteractionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interacciones", "{{lastInteractionId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
