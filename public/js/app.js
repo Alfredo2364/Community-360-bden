@@ -413,7 +413,7 @@
     tbodyRiesgo.querySelectorAll('tr.clickable-row').forEach((row) => {
       row.addEventListener('click', () => {
         const id = row.getAttribute('data-userid');
-        document.getElementById('inputVista360').value = id;
+        document.getElementById('inputVista360').value = '';
         loadVista360(id);
       });
     });
@@ -630,17 +630,25 @@
     });
   }
 
+  function clearLoginInputs() {
+    loginForm.reset();
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+  }
+
   function handleForceLogout() {
     if (socket) {
       socket.disconnect();
       socket = null;
     }
     clearToken();
+    clearLoginInputs();
     dashboardView.classList.add('hidden');
     loginView.classList.remove('hidden');
   }
 
   async function enterDashboard(user) {
+    clearLoginInputs();
     adminEmailLabel.textContent = `${user.email} (${user.rol})`;
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
@@ -651,7 +659,7 @@
     const [realtimeSnap] = await Promise.all([
       apiFetch('/api/analytics/realtime'),
       loadHistoricalAnalytics(),
-      loadVista360(document.getElementById('inputVista360').value || 'U000852')
+      loadVista360('U000852')
     ]);
     updateRealtimeUI(realtimeSnap);
   }
@@ -661,6 +669,7 @@
     loginError.classList.add('hidden');
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
+    clearLoginInputs();
 
     try {
       const data = await apiFetch('/api/auth/login', {
@@ -668,7 +677,6 @@
         body: JSON.stringify({ email, password })
       });
       setToken(data.token);
-      document.getElementById('loginPassword').value = '';
       await enterDashboard(data.user);
     } catch (err) {
       loginError.textContent = err.message;
@@ -689,19 +697,22 @@
   refreshHistoricalBtn.addEventListener('click', async () => {
     await Promise.all([
       loadHistoricalAnalytics(),
-      loadVista360(document.getElementById('inputVista360').value || 'U000852')
+      loadVista360('U000852')
     ]);
   });
 
-  document.getElementById('btnBuscar360').addEventListener('click', () => {
-    loadVista360(document.getElementById('inputVista360').value);
+  document.getElementById('btnBuscar360').addEventListener('click', async () => {
+    const inputEl = document.getElementById('inputVista360');
+    const targetId = inputEl.value;
+    inputEl.value = '';
+    await loadVista360(targetId);
   });
 
   document.querySelectorAll('.btn-chip[data-userid]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const uid = btn.getAttribute('data-userid');
-      document.getElementById('inputVista360').value = uid;
-      loadVista360(uid);
+      document.getElementById('inputVista360').value = '';
+      await loadVista360(uid);
     });
   });
 
