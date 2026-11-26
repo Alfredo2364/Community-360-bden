@@ -1,6 +1,6 @@
 (() => {
   // Pegar aquí la URL pública del backend desplegado en Railway (sin barra diagonal al final)
-  const RAILWAY_BACKEND_URL = 'https://REEMPLAZAR-CON-TU-BACKEND.up.railway.app';
+  const RAILWAY_BACKEND_URL = 'https://community-360-bden-production.up.railway.app/';
 
   const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
     ? 'http://localhost:3000'
