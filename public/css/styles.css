@@ -33,11 +33,14 @@ body {
 }
 
 code {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
   font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 0.83em;
+  font-size: 0.81em;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 5px;
   color: var(--accent-cyan);
 }
@@ -264,11 +267,15 @@ code {
 }
 
 .btn-table-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   background: rgba(59, 130, 246, 0.14);
   color: #93c5fd;
   border: 1px solid rgba(59, 130, 246, 0.35);
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
@@ -1028,18 +1035,25 @@ code {
 }
 
 .tag-pill {
-  font-size: 0.73rem;
-  padding: 3px 10px;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 4px 10px;
+  border-radius: 6px;
   background: rgba(59, 130, 246, 0.14);
   border: 1px solid rgba(59, 130, 246, 0.35);
   color: #93c5fd;
 }
 
 .tag-pill.privacy-alert {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.42);
   color: #fcd34d;
+  letter-spacing: 0.02em;
 }
 
 /* =========================================================
@@ -1084,8 +1098,11 @@ code {
 }
 
 .badge-status {
-  display: inline-block;
-  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 4px 9px;
   border-radius: 5px;
   font-size: 0.71rem;
   font-weight: 700;
