@@ -65,7 +65,7 @@
         <div class="brand-logo-box">360</div>
         <div>
           <div class="sidebar-title">COMMUNITY 360</div>
-          <div class="sidebar-subtitle">Analytics &amp; Telemetry Suite</div>
+          <div class="sidebar-subtitle">Tactical Analytics &amp; Geo-Suite</div>
         </div>
       </div>
 
@@ -93,7 +93,7 @@
           <span class="cat-icon">⊕</span>
           <div class="cat-tab-text">
             <span class="cat-tab-title">Expediente Vista 360°</span>
-            <span class="cat-tab-sub">Perfil individual e historial</span>
+            <span class="cat-tab-sub">Perfil individual y rastreo</span>
           </div>
           <span id="badgeNavCurrent360" class="cat-tab-metric cyan">—</span>
         </button>
@@ -101,8 +101,8 @@
         <button class="cat-tab-btn" data-category="cat-governance">
           <span class="cat-icon">❖</span>
           <div class="cat-tab-text">
-            <span class="cat-tab-title">Gobernanza y Calidad</span>
-            <span class="cat-tab-sub">Pipeline ETL, privacidad y rechazos</span>
+            <span class="cat-tab-title">Gobernanza y Geo-Radar</span>
+            <span class="cat-tab-sub">Satélite orbital, privacidad y ETL</span>
           </div>
           <span id="badgeNavCuarentena" class="cat-tab-metric amber">0</span>
         </button>
@@ -150,7 +150,7 @@
           <div class="pane-toolbar">
             <div class="pane-title-group">
               <span class="section-tag">MÓDULO 01 · TELEMETRÍA REACTIVA</span>
-              <h2>Indicadores Dinámicos yActividad en Tiempo Real</h2>
+              <h2>Indicadores Dinámicos y Actividad en Tiempo Real</h2>
             </div>
 
             <div class="subtab-bar" data-parent="cat-realtime">
@@ -507,21 +507,21 @@
         </section>
 
         <!-- =================================================================== -->
-        <!-- CATEGORÍA 4: GOBERNANZA, PRIVACIDAD Y CALIDAD DE DATOS              -->
+        <!-- CATEGORÍA 4: GOBERNANZA, PRIVACIDAD Y GEO-RADAR ORBITAL             -->
         <!-- =================================================================== -->
         <section id="cat-governance" class="category-pane">
           <div class="pane-toolbar">
             <div class="pane-title-group">
-              <span class="section-tag">MÓDULO 04 · AUDITORÍA Y CUMPLIMIENTO</span>
+              <span class="section-tag">MÓDULO 04 · AUDITORÍA, PRIVACIDAD Y TELEMETRÍA SATELITAL</span>
               <h2>Gobernanza del Pipeline ETL, Privacidad y Cuarentena</h2>
             </div>
 
             <div class="subtab-bar" data-parent="cat-governance">
-              <button class="subtab-btn active" data-subtab="gov-sub-etl">
+              <button class="subtab-btn" data-subtab="gov-sub-etl">
                 Balance de Calidad ETL
               </button>
-              <button class="subtab-btn" data-subtab="gov-sub-privacy">
-                Auditoría de Privacidad
+              <button class="subtab-btn active" data-subtab="gov-sub-privacy">
+                Auditoría de Privacidad y Geo-Radar
               </button>
               <button class="subtab-btn" data-subtab="gov-sub-quarantine">
                 Registros en Cuarentena
@@ -530,7 +530,7 @@
           </div>
 
           <!-- SUBAPARTADO 4.1: BALANCE ETL -->
-          <div id="gov-sub-etl" class="subtab-pane active">
+          <div id="gov-sub-etl" class="subtab-pane">
             <article class="panel-card">
               <div class="panel-header-flex">
                 <div>
@@ -545,8 +545,125 @@
             </article>
           </div>
 
-          <!-- SUBAPARTADO 4.2: PRIVACIDAD GEOGRÁFICA -->
-          <div id="gov-sub-privacy" class="subtab-pane">
+          <!-- SUBAPARTADO 4.2: PRIVACIDAD GEOGRÁFICA + SISTEMA TÁCTICO ORBITAL G.I. JOE -->
+          <div id="gov-sub-privacy" class="subtab-pane active">
+            <!-- CENTRO DE DISEÑO TÁCTICO: ZEUS-360 ORBITAL GEO-TRACKING SYSTEM -->
+            <article class="tactical-hud-shell">
+              <div class="tactical-hud-topbar">
+                <div class="tactical-hud-title-block">
+                  <span class="tactical-blink-dot"></span>
+                  <div>
+                    <div class="tactical-sys-code">ORBITAL SAT-LINK // ZEUS-360 TACTICAL GEOLOCATION</div>
+                    <h3>Sistema de Geolocalización Satelital y Escudo de Privacidad</h3>
+                  </div>
+                </div>
+
+                <div class="tactical-mode-controls">
+                  <button id="btnTacticalModeBefore" class="tactical-btn">
+                    [01] ESCANEO PRE-ETL (DATOS CRUDOS)
+                  </button>
+                  <button id="btnTacticalModeAfter" class="tactical-btn active">
+                    [02] ESCUDO POST-ETL (PRIVACIDAD ACTIVA)
+                  </button>
+                  <button id="btnTacticalCycleTarget" class="tactical-btn cyan-outline">
+                    ⊕ CAMBIAR OBJETIVO SATELITAL
+                  </button>
+                </div>
+              </div>
+
+              <div class="tactical-hud-stage">
+                <!-- PANEL IZQUIERDO: TELEMETRÍA BALÍSTICA / ORBITAL -->
+                <div class="tactical-side-panel">
+                  <div class="tactical-box-header">TELEMETRÍA ORBITAL</div>
+                  <div class="tactical-readout-item">
+                    <span>SATÉLITE / ÓRBITA</span>
+                    <strong>ZEUS-IV · LEO 408.5 KM</strong>
+                  </div>
+                  <div class="tactical-readout-item">
+                    <span>OBJETIVO SELECCIONADO</span>
+                    <strong id="hudTargetAlias">CARGANDO...</strong>
+                  </div>
+                  <div class="tactical-readout-item">
+                    <span>ESTADO DE RASTREO</span>
+                    <strong id="hudLockStatus" class="hud-status-text locked">LOCK ENGAGED</strong>
+                  </div>
+                  <div class="tactical-readout-item">
+                    <span>LATITUD / LONGITUD</span>
+                    <strong id="hudCoordsText" class="mono-coord">20.9360° N, 89.6843° W</strong>
+                  </div>
+                  <div class="tactical-readout-item">
+                    <span>SECTOR / UBICACIÓN</span>
+                    <strong id="hudSectorText">MÉRIDA, MÉXICO</strong>
+                  </div>
+                  <div class="tactical-readout-item">
+                    <span>ZONA HORARIA</span>
+                    <strong id="hudTimezoneText">AMERICA/MERIDA</strong>
+                  </div>
+
+                  <div class="tactical-box-header" style="margin-top: 12px;">SELECCIÓN DE OBJETIVO</div>
+                  <div id="hudTargetSelectorList" class="tactical-target-list"></div>
+                </div>
+
+                <!-- PANEL CENTRAL: VISOR SATELITAL INTERACTIVO (CANVAS ORBITAL) -->
+                <div class="tactical-map-viewport">
+                  <div class="hud-corner tl"></div>
+                  <div class="hud-corner tr"></div>
+                  <div class="hud-corner bl"></div>
+                  <div class="hud-corner br"></div>
+
+                  <div class="hud-overlay-top">
+                    <span>AZIMUTH: <strong id="hudAzimuthVal">142.8°</strong></span>
+                    <span>INCLINATION: <strong>51.64°</strong></span>
+                    <span>ACTIVE NODES: <strong id="hudActiveNodesCount">0</strong></span>
+                    <span>SHIELDED NODES: <strong id="hudShieldedNodesCount">171</strong></span>
+                  </div>
+
+                  <canvas id="tacticalGeoCanvas" width="860" height="440"></canvas>
+
+                  <div class="hud-overlay-bottom">
+                    <div id="hudAlertBanner" class="hud-alert-banner">
+                      SISTEMA DE ADQUISICIÓN ORBITAL EN LÍNEA · SELECCIONE UN NODO EN EL MAPA
+                    </div>
+                  </div>
+                </div>
+
+                <!-- PANEL DERECHO: AUDITORÍA DE SUPRESIÓN GEOGRÁFICA -->
+                <div class="tactical-side-panel">
+                  <div class="tactical-box-header">PROTOCOLO DE PRIVACIDAD</div>
+                  <div class="tactical-protocol-card">
+                    <div class="protocol-metric">
+                      <span>CON CONSENTIMIENTO (RASTREABLES)</span>
+                      <strong id="hudConsentYesCount" class="emerald-text">897</strong>
+                    </div>
+                    <div class="protocol-metric">
+                      <span>SIN CONSENTIMIENTO (ESCUDO ACTIVO)</span>
+                      <strong id="hudConsentNoCount" class="amber-text">171</strong>
+                    </div>
+                  </div>
+
+                  <div class="tactical-box-header" style="margin-top: 12px;">FIRMA DE TELEMETRÍA</div>
+                  <div id="hudTelemetryBars" class="tactical-waveform">
+                    <div class="wave-bar" style="height: 45%"></div>
+                    <div class="wave-bar" style="height: 80%"></div>
+                    <div class="wave-bar" style="height: 35%"></div>
+                    <div class="wave-bar" style="height: 92%"></div>
+                    <div class="wave-bar" style="height: 60%"></div>
+                    <div class="wave-bar" style="height: 74%"></div>
+                    <div class="wave-bar" style="height: 28%"></div>
+                    <div class="wave-bar" style="height: 88%"></div>
+                    <div class="wave-bar" style="height: 52%"></div>
+                    <div class="wave-bar" style="height: 96%"></div>
+                    <div class="wave-bar" style="height: 40%"></div>
+                    <div class="wave-bar" style="height: 68%"></div>
+                  </div>
+
+                  <div class="tactical-box-header" style="margin-top: 12px;">MATRIZ DE VECTORES</div>
+                  <div id="hudVectorLog" class="tactical-vector-log"></div>
+                </div>
+              </div>
+            </article>
+
+            <!-- COMPARATIVA JSON ANTES VS DESPUÉS DEBAJO DEL VISOR TÁCTICO -->
             <article class="panel-card">
               <div class="panel-header-flex">
                 <div>
