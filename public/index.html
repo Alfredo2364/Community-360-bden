@@ -175,66 +175,132 @@
           <!-- SUBAPARTADO 1.1: KPIS Y STREAM RECIENTE -->
           <div id="rt-sub-kpis" class="subtab-pane active">
             <div class="kpi-grid">
-              <article class="kpi-card">
+              <article class="kpi-card kpi-theme-cyan">
                 <div class="kpi-card-top">
-                  <span class="kpi-label">Interacciones Procesadas</span>
-                  <span class="kpi-engine-tag">En Vivo</span>
+                  <div class="kpi-title-wrap">
+                    <span class="kpi-icon-box cyan">⚡</span>
+                    <span class="kpi-label">Interacciones Procesadas</span>
+                  </div>
+                  <span class="kpi-engine-tag cyan">En Vivo</span>
                 </div>
-                <div id="kpiTotalInteracciones" class="kpi-value">0</div>
+                <div class="kpi-value-row">
+                  <div id="kpiTotalInteracciones" class="kpi-value">0</div>
+                  <span id="kpiPillInter" class="kpi-trend-pill cyan">Activas</span>
+                </div>
                 <div id="kpiPromedioInteracciones" class="kpi-meta">0.00 prom. por participante</div>
                 <div class="kpi-progress"><div id="barKpiInter" class="kpi-progress-fill cyan" style="width: 65%"></div></div>
               </article>
 
-              <article class="kpi-card">
+              <article class="kpi-card kpi-theme-emerald">
                 <div class="kpi-card-top">
-                  <span class="kpi-label">Tasa de Participación Activa</span>
-                  <span class="kpi-engine-tag">Comunidad</span>
+                  <div class="kpi-title-wrap">
+                    <span class="kpi-icon-box emerald">◈</span>
+                    <span class="kpi-label">Tasa de Participación Activa</span>
+                  </div>
+                  <span class="kpi-engine-tag emerald">Comunidad</span>
                 </div>
-                <div id="kpiTasaParticipacion" class="kpi-value">0%</div>
+                <div class="kpi-value-row">
+                  <div id="kpiTasaParticipacion" class="kpi-value">0%</div>
+                  <span id="kpiPillActivos" class="kpi-trend-pill emerald">Saludable</span>
+                </div>
                 <div id="kpiUsuariosActivos" class="kpi-meta">0 activos de 0 registrados</div>
                 <div class="kpi-progress"><div id="barKpiTpa" class="kpi-progress-fill emerald" style="width: 36%"></div></div>
               </article>
 
-              <article class="kpi-card">
+              <article class="kpi-card kpi-theme-amber">
                 <div class="kpi-card-top">
-                  <span class="kpi-label">Índice de Riesgo de Abandono</span>
-                  <span class="kpi-engine-tag">Retención</span>
+                  <div class="kpi-title-wrap">
+                    <span class="kpi-icon-box amber">▲</span>
+                    <span class="kpi-label">Índice de Riesgo de Abandono</span>
+                  </div>
+                  <span class="kpi-engine-tag amber">Retención</span>
                 </div>
-                <div id="kpiIndiceRiesgo" class="kpi-value warning">0%</div>
+                <div class="kpi-value-row">
+                  <div id="kpiIndiceRiesgo" class="kpi-value warning">0%</div>
+                  <span id="kpiPillRiesgo" class="kpi-trend-pill amber">Atención</span>
+                </div>
                 <div id="kpiDesgloseRiesgo" class="kpi-meta">0 en riesgo · 0 inactivos</div>
                 <div class="kpi-progress"><div id="barKpiIra" class="kpi-progress-fill amber" style="width: 63%"></div></div>
               </article>
 
-              <article class="kpi-card">
+              <article class="kpi-card kpi-theme-blue">
                 <div class="kpi-card-top">
-                  <span class="kpi-label">Usuarios con Actividad Directa</span>
-                  <span class="kpi-engine-tag">Cobertura</span>
+                  <div class="kpi-title-wrap">
+                    <span class="kpi-icon-box blue">◎</span>
+                    <span class="kpi-label">Usuarios con Actividad Directa</span>
+                  </div>
+                  <span class="kpi-engine-tag blue">Cobertura</span>
                 </div>
-                <div id="kpiUsuariosConInteraccion" class="kpi-value">0</div>
+                <div class="kpi-value-row">
+                  <div id="kpiUsuariosConInteraccion" class="kpi-value">0</div>
+                  <span id="kpiPillCobertura" class="kpi-trend-pill blue">0%</span>
+                </div>
                 <div id="kpiTasaInteraccionDirecta" class="kpi-meta">0% sobre padrón total</div>
                 <div class="kpi-progress"><div id="barKpiDirecta" class="kpi-progress-fill blue" style="width: 15%"></div></div>
               </article>
 
-              <article class="kpi-card">
+              <article class="kpi-card kpi-theme-violet">
                 <div class="kpi-card-top">
-                  <span class="kpi-label">Sentimiento Promedio</span>
-                  <span class="kpi-engine-tag">Índice</span>
+                  <div class="kpi-title-wrap">
+                    <span class="kpi-icon-box violet">✦</span>
+                    <span class="kpi-label">Sentimiento Promedio</span>
+                  </div>
+                  <span class="kpi-engine-tag violet">Índice</span>
                 </div>
-                <div id="kpiSentimientoPromedio" class="kpi-value">0.000</div>
+                <div class="kpi-value-row">
+                  <div id="kpiSentimientoPromedio" class="kpi-value">0.000</div>
+                  <span id="kpiPillSentimiento" class="kpi-trend-pill violet">Positivo</span>
+                </div>
                 <div id="kpiTotalReacciones" class="kpi-meta">0 reacciones acumuladas</div>
                 <div class="kpi-progress"><div id="barKpiSent" class="kpi-progress-fill violet" style="width: 65%"></div></div>
               </article>
 
-              <article class="kpi-card">
+              <article class="kpi-card kpi-theme-cyan">
                 <div class="kpi-card-top">
-                  <span class="kpi-label">Padrón Total Registrado</span>
-                  <span class="kpi-engine-tag">Base</span>
+                  <div class="kpi-title-wrap">
+                    <span class="kpi-icon-box blue">▣</span>
+                    <span class="kpi-label">Padrón Total Registrado</span>
+                  </div>
+                  <span class="kpi-engine-tag blue">Base</span>
                 </div>
-                <div id="kpiTotalUsuariosSql" class="kpi-value">0</div>
+                <div class="kpi-value-row">
+                  <div id="kpiTotalUsuariosSql" class="kpi-value">0</div>
+                  <span class="kpi-trend-pill blue">100%</span>
+                </div>
                 <div id="kpiPromedioGlobal" class="kpi-meta">0.00 interacciones / usuario</div>
                 <div class="kpi-progress"><div class="kpi-progress-fill blue" style="width: 100%"></div></div>
               </article>
             </div>
+
+            <!-- BARRA EJECUTIVA DE BALANCE DE COMUNIDAD Y TENDENCIAS EN VIVO -->
+            <article class="telemetry-pulse-strip">
+              <div class="pulse-health-block">
+                <div class="pulse-block-header">
+                  <span class="pulse-title">DISTRIBUCIÓN DE ESTADOS DE LA COMUNIDAD</span>
+                  <div id="pulseHealthLegend" class="pulse-legend-row"></div>
+                </div>
+                <div class="stacked-health-bar">
+                  <div id="healthSegActivo" class="health-seg emerald" style="width: 36.5%"></div>
+                  <div id="healthSegRiesgo" class="health-seg amber" style="width: 39.4%"></div>
+                  <div id="healthSegInactivo" class="health-seg rose" style="width: 24.1%"></div>
+                </div>
+              </div>
+
+              <div class="pulse-highlights-block">
+                <div class="highlight-mini-card">
+                  <span>CANAL LÍDER EN VIVO</span>
+                  <strong id="hiTopChannel">—</strong>
+                </div>
+                <div class="highlight-mini-card">
+                  <span>FORMATO DOMINANTE</span>
+                  <strong id="hiTopType">—</strong>
+                </div>
+                <div class="highlight-mini-card">
+                  <span>TEMA EN TENDENCIA</span>
+                  <strong id="hiTopTopic">—</strong>
+                </div>
+              </div>
+            </article>
 
             <div class="split-2col">
               <article class="panel-card">

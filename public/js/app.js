@@ -969,6 +969,47 @@
     document.getElementById('kpiPromedioGlobal').textContent =
       `${kpis.promedioInteraccionesGlobal} interacciones / usuario`;
 
+    const pillCobertura = document.getElementById('kpiPillCobertura');
+    if (pillCobertura) pillCobertura.textContent = `${kpis.tasaInteraccionDirecta}%`;
+
+    const pillSent = document.getElementById('kpiPillSentimiento');
+    if (pillSent) {
+      const sVal = Number(kpis.sentimientoPromedioInteracciones);
+      pillSent.textContent = sVal >= 0.15 ? 'Positivo' : sVal <= -0.1 ? 'Negativo' : 'Neutral';
+    }
+
+    // Actualizar Barra Ejecutiva de Balance de Comunidad y Tendencias
+    const totalU = Math.max(1, Number(kpis.totalUsuarios || 1));
+    const pAct = ((Number(kpis.usuariosActivos || 0) / totalU) * 100).toFixed(1);
+    const pRie = ((Number(kpis.usuariosEnRiesgo || 0) / totalU) * 100).toFixed(1);
+    const pIna = ((Number(kpis.usuariosInactivos || 0) / totalU) * 100).toFixed(1);
+
+    const segAct = document.getElementById('healthSegActivo');
+    const segRie = document.getElementById('healthSegRiesgo');
+    const segIna = document.getElementById('healthSegInactivo');
+    if (segAct) segAct.style.width = `${pAct}%`;
+    if (segRie) segRie.style.width = `${pRie}%`;
+    if (segIna) segIna.style.width = `${pIna}%`;
+
+    const legendEl = document.getElementById('pulseHealthLegend');
+    if (legendEl) {
+      legendEl.innerHTML = `
+        <span class="pulse-legend-item"><i class="legend-dot emerald"></i> Activos: <strong>${kpis.usuariosActivos}</strong> (${pAct}%)</span>
+        <span class="pulse-legend-item"><i class="legend-dot amber"></i> En Riesgo: <strong>${kpis.usuariosEnRiesgo}</strong> (${pRie}%)</span>
+        <span class="pulse-legend-item"><i class="legend-dot rose"></i> Inactivos: <strong>${kpis.usuariosInactivos}</strong> (${pIna}%)</span>
+      `;
+    }
+
+    const topPlat = series.barrasPlataforma?.[0];
+    const topTipo = series.donaTipoInteraccion?.[0];
+    const topTema = series.temasInteraccion?.[0];
+    const hiChan = document.getElementById('hiTopChannel');
+    const hiType = document.getElementById('hiTopType');
+    const hiTop = document.getElementById('hiTopTopic');
+    if (hiChan && topPlat) hiChan.textContent = `${topPlat.plataforma} (${topPlat.porcentaje}%)`;
+    if (hiType && topTipo) hiType.textContent = `${topTipo.tipo} (${topTipo.porcentaje}%)`;
+    if (hiTop && topTema) hiTop.textContent = `${topTema.tema} (${topTema.porcentaje}%)`;
+
     if (evento) {
       const op = String(evento.operacion || 'SNAPSHOT').toUpperCase();
       const badge = document.getElementById('eventBadge');
