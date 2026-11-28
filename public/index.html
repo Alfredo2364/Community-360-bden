@@ -3,39 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Community 360 | Suite Ejecutiva de Analítica Híbrida Azure</title>
+  <title>Community 360 | Plataforma de Inteligencia Analítica</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 </head>
 <body>
   <!-- ========================================================= -->
-  <!-- PANTALLA DE LOGIN (BLOQUEA EL DASHBOARD SI NO HAY SESIÓN) -->
+  <!-- PANTALLA DE ACCESO (SIN INFORMACIÓN INTERNA NI CLAVES)    -->
   <!-- ========================================================= -->
   <section id="loginView" class="login-screen">
     <div class="login-card">
-      <div class="login-header-brand">
-        <span class="logo-dot"></span>
-        <span class="brand-badge">COMMUNITY 360 · ENTERPRISE HYBRID CLOUD</span>
+      <div class="login-brand-row">
+        <div class="brand-logo-box">360</div>
+        <div>
+          <span class="brand-badge">COMMUNITY 360</span>
+          <h1>Portal de Inteligencia Analítica</h1>
+        </div>
       </div>
-      <h1>Consola Ejecutiva de Analítica</h1>
       <p class="login-subtitle">
-        Autenticación centralizada contra Azure SQL Database (<code>dbo.admins</code>) y telemetría reactiva con Azure Cosmos DB Serverless.
+        Ingrese sus credenciales autorizadas para acceder al panel de monitoreo y analítica avanzada.
       </p>
       <form id="loginForm" autocomplete="off">
         <div class="field-group">
-          <label for="loginEmail">Usuario / Correo Institucional</label>
+          <label for="loginEmail">Usuario o Correo</label>
           <input
             type="text"
             id="loginEmail"
             name="email"
-            placeholder="Ingrese su usuario o correo"
+            placeholder="Ingrese su identificador"
             autocomplete="off"
             required
           />
         </div>
         <div class="field-group">
-          <label for="loginPassword">Contraseña de Acceso</label>
+          <label for="loginPassword">Contraseña</label>
           <input
             type="password"
             id="loginPassword"
@@ -47,570 +49,557 @@
         </div>
         <div id="loginError" class="login-error hidden"></div>
         <button type="submit" id="loginBtn" class="btn-primary full-width">
-          Autenticar Sesión Segura (JWT)
+          Iniciar Sesión
         </button>
       </form>
-      <div class="login-footer-meta">
-        <span>Motor Relacional: Azure SQL</span>
-        <span>·</span>
-        <span>Motor Documental: Cosmos DB NoSQL</span>
-        <span>·</span>
-        <span>Tiempo Real: Socket.IO</span>
-      </div>
     </div>
   </section>
 
   <!-- ========================================================= -->
-  <!-- SUITE ANALÍTICA PRINCIPAL (PROTEGIDA CON BEARER JWT)      -->
+  <!-- CONSOLA EJECUTIVA PRINCIPAL (SIDEBAR + ÁREAS MODULARES)   -->
   <!-- ========================================================= -->
-  <div id="dashboardView" class="dashboard-wrapper hidden">
-    <!-- BARRA SUPERIOR EJECUTIVA -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <div class="brand-emblem">C360</div>
+  <div id="dashboardView" class="app-shell hidden">
+    <!-- SIDEBAR LATERAL DE NAVEGACIÓN POR CATEGORÍAS -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo-box">360</div>
         <div>
-          <div class="topbar-title-row">
-            <span class="topbar-title">COMMUNITY 360</span>
-            <span class="arch-chip">HYBRID CLOUD SUITE</span>
-          </div>
-          <div class="topbar-subtitle">Azure SQL Database + Azure Cosmos DB for NoSQL (Serverless)</div>
+          <div class="sidebar-title">COMMUNITY 360</div>
+          <div class="sidebar-subtitle">Analytics &amp; Telemetry Suite</div>
         </div>
       </div>
 
-      <!-- TICKER GLOBAL DE EVENTOS WEBSOCKET EN TIEMPO REAL -->
-      <div id="liveEventLog" class="live-event-log">
-        <span id="eventBadge" class="event-badge snapshot">SNAPSHOT</span>
-        <span id="eventDescription" class="event-desc-text">Esperando eventos de Cosmos DB...</span>
-        <span id="eventTime" class="event-time">--:--:--</span>
-      </div>
-
-      <div class="topbar-right">
-        <div id="wsStatusPill" class="status-pill disconnected">
-          <span class="status-indicator"></span>
-          <span id="wsStatusText">WebSocket: Desconectado</span>
-        </div>
-        <div class="admin-pill">
-          <span class="admin-dot"></span>
-          <span id="adminEmailLabel">admin</span>
-        </div>
-        <button id="refreshHistoricalBtn" class="btn-ghost" title="Sincronizar datos con Azure">
-          ↻ Sincronizar Nube
-        </button>
-        <button id="logoutBtn" class="btn-danger-outline">
-          Cerrar sesión
-        </button>
-      </div>
-    </header>
-
-    <!-- BARRA DE NAVEGACIÓN POR CATEGORÍAS PRINCIPALES (PESTAÑAS NIVEL 1) -->
-    <nav class="category-navbar" aria-label="Categorías principales del dashboard">
-      <div class="category-navbar-inner">
+      <div class="sidebar-section-label">MÓDULOS DE ANÁLISIS</div>
+      <nav class="sidebar-nav" aria-label="Categorías principales">
         <button class="cat-tab-btn active" data-category="cat-realtime">
-          <span class="cat-step">01</span>
+          <span class="cat-icon">◉</span>
           <div class="cat-tab-text">
-            <span class="cat-tab-title">Telemetría en Tiempo Real</span>
-            <span class="cat-tab-sub">Socket.IO · KPIs y Gráficas en Vivo</span>
+            <span class="cat-tab-title">Monitoreo en Vivo</span>
+            <span class="cat-tab-sub">Telemetría y KPIs dinámicos</span>
           </div>
           <span id="badgeNavTotalInter" class="cat-tab-metric">0</span>
         </button>
 
         <button class="cat-tab-btn" data-category="cat-historical">
-          <span class="cat-step">02</span>
+          <span class="cat-icon">▤</span>
           <div class="cat-tab-text">
-            <span class="cat-tab-title">Analítica Histórica y Retención</span>
-            <span class="cat-tab-sub">Azure SQL · Intereses, Plataformas y Riesgo</span>
+            <span class="cat-tab-title">Comunidad y Retención</span>
+            <span class="cat-tab-sub">Intereses, plataformas y riesgo</span>
           </div>
           <span id="badgeNavRiesgo" class="cat-tab-metric warning">0%</span>
         </button>
 
         <button class="cat-tab-btn" data-category="cat-vista360">
-          <span class="cat-step">03</span>
+          <span class="cat-icon">⊕</span>
           <div class="cat-tab-text">
-            <span class="cat-tab-title">Inteligencia Vista 360° Híbrida</span>
-            <span class="cat-tab-sub">Consulta Paralela SQL + Cosmos DB</span>
+            <span class="cat-tab-title">Expediente Vista 360°</span>
+            <span class="cat-tab-sub">Perfil individual e historial</span>
           </div>
-          <span id="badgeNavCurrent360" class="cat-tab-metric cyan">U000852</span>
+          <span id="badgeNavCurrent360" class="cat-tab-metric cyan">—</span>
         </button>
 
         <button class="cat-tab-btn" data-category="cat-governance">
-          <span class="cat-step">04</span>
+          <span class="cat-icon">❖</span>
           <div class="cat-tab-text">
-            <span class="cat-tab-title">Gobernanza ETL, Privacidad y Cuarentena</span>
-            <span class="cat-tab-sub">Auditoría, Anonimización y Rechazos</span>
+            <span class="cat-tab-title">Gobernanza y Calidad</span>
+            <span class="cat-tab-sub">Pipeline ETL, privacidad y rechazos</span>
           </div>
           <span id="badgeNavCuarentena" class="cat-tab-metric amber">0</span>
         </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="session-card">
+          <span class="session-label">Sesión Activa</span>
+          <strong id="adminEmailLabel" class="session-user">—</strong>
+        </div>
+        <div class="sidebar-actions">
+          <button id="refreshHistoricalBtn" class="btn-ghost full-width" title="Actualizar indicadores">
+            ↻ Sincronizar Datos
+          </button>
+          <button id="logoutBtn" class="btn-danger-outline full-width">
+            Cerrar sesión
+          </button>
+        </div>
       </div>
-    </nav>
+    </aside>
 
-    <!-- ÁREA DE TRABAJO DINÁMICA POR CATEGORÍAS Y SUBAPARTADOS -->
-    <main class="workspace-container">
-
-      <!-- =================================================================== -->
-      <!-- CATEGORÍA 1: TELEMETRÍA EN TIEMPO REAL (WEBSOCKETS / SOCKET.IO)     -->
-      <!-- =================================================================== -->
-      <section id="cat-realtime" class="category-pane active">
-        <div class="pane-toolbar">
-          <div class="pane-title-group">
-            <span class="section-tag">CATEGORÍA 01 · MOTOR REACTIVO SOCKET.IO + COSMOS DB</span>
-            <h2>Telemetría Dinámica y Recálculo Matemático en Vivo</h2>
-          </div>
-
-          <!-- BOTONES DE SUBAPARTADOS (PESTAÑAS NIVEL 2) -->
-          <div class="subtab-bar" data-parent="cat-realtime">
-            <button class="subtab-btn active" data-subtab="rt-sub-kpis">
-              Indicadores KPI y Stream
-            </button>
-            <button class="subtab-btn" data-subtab="rt-sub-bars">
-              Barras: Plataformas
-            </button>
-            <button class="subtab-btn" data-subtab="rt-sub-donut">
-              Dona: Tipología
-            </button>
-            <button class="subtab-btn" data-subtab="rt-sub-heatmap">
-              Mapa de Calor M[p,t]
-            </button>
-            <button class="subtab-btn" data-subtab="rt-sub-all">
-              Centro de Mando (3 Gráficas)
-            </button>
-          </div>
+    <!-- CONTENEDOR PRINCIPAL DE CONTENIDO -->
+    <div class="main-stage">
+      <!-- BARRA SUPERIOR DE ESTADO Y TELEMETRÍA -->
+      <header class="stage-topbar">
+        <div id="wsStatusPill" class="status-pill disconnected">
+          <span class="status-indicator"></span>
+          <span id="wsStatusText">Tiempo Real: Desconectado</span>
         </div>
 
-        <!-- SUBAPARTADO 1.1: KPIS EJECUTIVOS Y STREAM EN VIVO -->
-        <div id="rt-sub-kpis" class="subtab-pane active">
-          <div class="kpi-grid">
-            <article class="kpi-card accent-cyan">
-              <div class="kpi-card-top">
-                <span class="kpi-label">Interacciones Válidas (Cosmos DB)</span>
-                <span class="kpi-engine-tag">NoSQL</span>
-              </div>
-              <div id="kpiTotalInteracciones" class="kpi-value">0</div>
-              <div id="kpiPromedioInteracciones" class="kpi-meta">0.00 prom. por participante</div>
-              <div class="kpi-progress"><div id="barKpiInter" class="kpi-progress-fill cyan" style="width: 65%"></div></div>
-            </article>
+        <div id="liveEventLog" class="live-event-log">
+          <span id="eventBadge" class="event-badge snapshot">SINCRONIZADO</span>
+          <span id="eventDescription" class="event-desc-text">Canal de eventos activo</span>
+          <span id="eventTime" class="event-time">--:--:--</span>
+        </div>
+      </header>
 
-            <article class="kpi-card accent-emerald">
-              <div class="kpi-card-top">
-                <span class="kpi-label">Tasa de Participación Activa (TPA)</span>
-                <span class="kpi-engine-tag">Híbrido</span>
-              </div>
-              <div id="kpiTasaParticipacion" class="kpi-value">0%</div>
-              <div id="kpiUsuariosActivos" class="kpi-meta">0 activos de 0 usuarios SQL</div>
-              <div class="kpi-progress"><div id="barKpiTpa" class="kpi-progress-fill emerald" style="width: 36%"></div></div>
-            </article>
+      <!-- ÁREA DINÁMICA DE PANELES POR CATEGORÍA -->
+      <main class="workspace-container">
 
-            <article class="kpi-card accent-amber">
-              <div class="kpi-card-top">
-                <span class="kpi-label">Índice de Riesgo de Abandono (IRA)</span>
-                <span class="kpi-engine-tag">Churn</span>
-              </div>
-              <div id="kpiIndiceRiesgo" class="kpi-value warning">0%</div>
-              <div id="kpiDesgloseRiesgo" class="kpi-meta">0 en riesgo · 0 inactivos</div>
-              <div class="kpi-progress"><div id="barKpiIra" class="kpi-progress-fill amber" style="width: 63%"></div></div>
-            </article>
+        <!-- =================================================================== -->
+        <!-- CATEGORÍA 1: MONITOREO EN TIEMPO REAL                               -->
+        <!-- =================================================================== -->
+        <section id="cat-realtime" class="category-pane active">
+          <div class="pane-toolbar">
+            <div class="pane-title-group">
+              <span class="section-tag">MÓDULO 01 · TELEMETRÍA REACTIVA</span>
+              <h2>Indicadores Dinámicos yActividad en Tiempo Real</h2>
+            </div>
 
-            <article class="kpi-card accent-blue">
-              <div class="kpi-card-top">
-                <span class="kpi-label">Usuarios con Interacción en Vivo</span>
-                <span class="kpi-engine-tag">Cosmos</span>
-              </div>
-              <div id="kpiUsuariosConInteraccion" class="kpi-value">0</div>
-              <div id="kpiTasaInteraccionDirecta" class="kpi-meta">0% cobertura activa en Cosmos DB</div>
-              <div class="kpi-progress"><div id="barKpiDirecta" class="kpi-progress-fill blue" style="width: 15%"></div></div>
-            </article>
-
-            <article class="kpi-card accent-violet">
-              <div class="kpi-card-top">
-                <span class="kpi-label">Sentimiento Promedio en Vivo</span>
-                <span class="kpi-engine-tag">NLP</span>
-              </div>
-              <div id="kpiSentimientoPromedio" class="kpi-value">0.000</div>
-              <div id="kpiTotalReacciones" class="kpi-meta">0 reacciones acumuladas</div>
-              <div class="kpi-progress"><div id="barKpiSent" class="kpi-progress-fill violet" style="width: 65%"></div></div>
-            </article>
-
-            <article class="kpi-card accent-blue">
-              <div class="kpi-card-top">
-                <span class="kpi-label">Padrón Relacional (Azure SQL)</span>
-                <span class="kpi-engine-tag">SQL</span>
-              </div>
-              <div id="kpiTotalUsuariosSql" class="kpi-value">0</div>
-              <div id="kpiPromedioGlobal" class="kpi-meta">0.00 interacciones / usuario padrón</div>
-              <div class="kpi-progress"><div class="kpi-progress-fill blue" style="width: 100%"></div></div>
-            </article>
+            <div class="subtab-bar" data-parent="cat-realtime">
+              <button class="subtab-btn active" data-subtab="rt-sub-kpis">
+                Resumen KPI y Flujo
+              </button>
+              <button class="subtab-btn" data-subtab="rt-sub-bars">
+                Actividad por Plataforma
+              </button>
+              <button class="subtab-btn" data-subtab="rt-sub-donut">
+                Tipología de Interacción
+              </button>
+              <button class="subtab-btn" data-subtab="rt-sub-heatmap">
+                Matriz de Intensidad
+              </button>
+              <button class="subtab-btn" data-subtab="rt-sub-all">
+                Vista Mosaico (3 Gráficas)
+              </button>
+            </div>
           </div>
 
-          <div class="split-2col">
-            <article class="panel-card">
-              <div class="panel-header-flex">
-                <div>
-                  <h3>Últimas Interacciones Procesadas en Tiempo Real</h3>
-                  <p class="panel-subtitle">Stream documental sincronizado automáticamente ante eventos POST, PUT y DELETE.</p>
+          <!-- SUBAPARTADO 1.1: KPIS Y STREAM RECIENTE -->
+          <div id="rt-sub-kpis" class="subtab-pane active">
+            <div class="kpi-grid">
+              <article class="kpi-card">
+                <div class="kpi-card-top">
+                  <span class="kpi-label">Interacciones Procesadas</span>
+                  <span class="kpi-engine-tag">En Vivo</span>
                 </div>
-                <span class="chart-badge">Top 8 Recientes</span>
-              </div>
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>ID Interacción</th>
-                      <th>Usuario</th>
-                      <th>Canal</th>
-                      <th>Tipo</th>
-                      <th>Tema</th>
-                      <th>Sentimiento</th>
-                      <th>Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tableRecentStreamBody"></tbody>
-                </table>
-              </div>
-            </article>
+                <div id="kpiTotalInteracciones" class="kpi-value">0</div>
+                <div id="kpiPromedioInteracciones" class="kpi-meta">0.00 prom. por participante</div>
+                <div class="kpi-progress"><div id="barKpiInter" class="kpi-progress-fill cyan" style="width: 65%"></div></div>
+              </article>
 
-            <article class="panel-card">
-              <div class="panel-header-flex">
-                <div>
-                  <h3>Distribución Temática en Vivo (Cosmos DB)</h3>
-                  <p class="panel-subtitle">Participación porcentual por tema de conversación en el contenedor activo.</p>
+              <article class="kpi-card">
+                <div class="kpi-card-top">
+                  <span class="kpi-label">Tasa de Participación Activa</span>
+                  <span class="kpi-engine-tag">Comunidad</span>
                 </div>
-                <span class="chart-badge">Cálculo Dinámico</span>
-              </div>
-              <div id="liveTemasBreakdown" class="metric-bars-list"></div>
-            </article>
-          </div>
-        </div>
+                <div id="kpiTasaParticipacion" class="kpi-value">0%</div>
+                <div id="kpiUsuariosActivos" class="kpi-meta">0 activos de 0 registrados</div>
+                <div class="kpi-progress"><div id="barKpiTpa" class="kpi-progress-fill emerald" style="width: 36%"></div></div>
+              </article>
 
-        <!-- GRÁFICAS EN VIVO: CONTENEDOR COMPARTIDO / CONMUTABLE POR SUBAPARTADO -->
-        <div id="rt-charts-stage" class="rt-charts-stage hidden">
-          <article id="cardChartBars" class="chart-card">
-            <div class="chart-card-header">
-              <div>
-                <h3>1. Interacciones por Plataforma / Canal (Barras en Vivo)</h3>
-                <p class="panel-subtitle">Volumen absoluto y cuota porcentual por red social conectada.</p>
-              </div>
-              <span class="chart-badge">Recálculo WebSocket</span>
+              <article class="kpi-card">
+                <div class="kpi-card-top">
+                  <span class="kpi-label">Índice de Riesgo de Abandono</span>
+                  <span class="kpi-engine-tag">Retención</span>
+                </div>
+                <div id="kpiIndiceRiesgo" class="kpi-value warning">0%</div>
+                <div id="kpiDesgloseRiesgo" class="kpi-meta">0 en riesgo · 0 inactivos</div>
+                <div class="kpi-progress"><div id="barKpiIra" class="kpi-progress-fill amber" style="width: 63%"></div></div>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-card-top">
+                  <span class="kpi-label">Usuarios con Actividad Directa</span>
+                  <span class="kpi-engine-tag">Cobertura</span>
+                </div>
+                <div id="kpiUsuariosConInteraccion" class="kpi-value">0</div>
+                <div id="kpiTasaInteraccionDirecta" class="kpi-meta">0% sobre padrón total</div>
+                <div class="kpi-progress"><div id="barKpiDirecta" class="kpi-progress-fill blue" style="width: 15%"></div></div>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-card-top">
+                  <span class="kpi-label">Sentimiento Promedio</span>
+                  <span class="kpi-engine-tag">Índice</span>
+                </div>
+                <div id="kpiSentimientoPromedio" class="kpi-value">0.000</div>
+                <div id="kpiTotalReacciones" class="kpi-meta">0 reacciones acumuladas</div>
+                <div class="kpi-progress"><div id="barKpiSent" class="kpi-progress-fill violet" style="width: 65%"></div></div>
+              </article>
+
+              <article class="kpi-card">
+                <div class="kpi-card-top">
+                  <span class="kpi-label">Padrón Total Registrado</span>
+                  <span class="kpi-engine-tag">Base</span>
+                </div>
+                <div id="kpiTotalUsuariosSql" class="kpi-value">0</div>
+                <div id="kpiPromedioGlobal" class="kpi-meta">0.00 interacciones / usuario</div>
+                <div class="kpi-progress"><div class="kpi-progress-fill blue" style="width: 100%"></div></div>
+              </article>
             </div>
-            <div id="chartRealtimeBars" class="echart-box-large"></div>
-            <div id="summaryPillsBars" class="chart-footer-pills"></div>
-          </article>
 
-          <article id="cardChartDonut" class="chart-card">
-            <div class="chart-card-header">
-              <div>
-                <h3>2. Distribución por Tipo de Interacción (Dona en Vivo)</h3>
-                <p class="panel-subtitle">Proporción entre mensajes, comentarios, reacciones, encuestas y eventos.</p>
-              </div>
-              <span class="chart-badge">Recálculo WebSocket</span>
+            <div class="split-2col">
+              <article class="panel-card">
+                <div class="panel-header-flex">
+                  <div>
+                    <h3>Flujo Reciente de Interacciones</h3>
+                    <p class="panel-subtitle">Actualización automática en tiempo real. Seleccione una fila para abrir el expediente 360°.</p>
+                  </div>
+                  <span class="chart-badge">Últimos Eventos</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>ID Evento</th>
+                        <th>Usuario</th>
+                        <th>Canal</th>
+                        <th>Tipo</th>
+                        <th>Tema</th>
+                        <th>Sentimiento</th>
+                        <th>Fecha / Hora</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tableRecentStreamBody"></tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article class="panel-card">
+                <div class="panel-header-flex">
+                  <div>
+                    <h3>Distribución por Tema de Conversación</h3>
+                    <p class="panel-subtitle">Peso porcentual de cada categoría temática activa.</p>
+                  </div>
+                  <span class="chart-badge">En Vivo</span>
+                </div>
+                <div id="liveTemasBreakdown" class="metric-bars-list"></div>
+              </article>
             </div>
-            <div id="chartRealtimeDonut" class="echart-box-large"></div>
-            <div id="summaryPillsDonut" class="chart-footer-pills"></div>
-          </article>
-
-          <article id="cardChartHeatmap" class="chart-card full-span">
-            <div class="chart-card-header">
-              <div>
-                <h3>3. Mapa de Calor: Matriz de Intensidad Cruzada Plataforma vs. Tipo</h3>
-                <p class="panel-subtitle">Concentración exacta de actividad M[plataforma, tipo] calculada en tiempo real.</p>
-              </div>
-              <span class="chart-badge">Matriz Dinámica M[p,t]</span>
-            </div>
-            <div id="chartRealtimeHeatmap" class="echart-box-tall"></div>
-          </article>
-        </div>
-      </section>
-
-      <!-- =================================================================== -->
-      <!-- CATEGORÍA 2: ANALÍTICA HISTÓRICA Y RETENCIÓN (API REST + AZURE SQL) -->
-      <!-- =================================================================== -->
-      <section id="cat-historical" class="category-pane">
-        <div class="pane-toolbar">
-          <div class="pane-title-group">
-            <span class="section-tag">CATEGORÍA 02 · ANALÍTICA RELACIONAL E HISTÓRICA (BEARER JWT)</span>
-            <h2>Segmentación de Comunidad, Intereses y Riesgo de Abandono</h2>
           </div>
 
-          <div class="subtab-bar" data-parent="cat-historical">
-            <button class="subtab-btn active" data-subtab="hist-sub-interests">
-              Top Intereses Normalizados
-            </button>
-            <button class="subtab-btn" data-subtab="hist-sub-platforms">
-              Plataformas y Estatus SQL
-            </button>
-            <button class="subtab-btn" data-subtab="hist-sub-churn">
-              Tabla de Riesgo de Abandono
-            </button>
-          </div>
-        </div>
-
-        <!-- SUBAPARTADO 2.1: TOP INTERESES NORMALIZADOS -->
-        <div id="hist-sub-interests" class="subtab-pane active">
-          <div class="split-chart-table">
-            <article class="chart-card">
+          <!-- ESCENARIO DE GRÁFICAS EN VIVO (CONMUTABLE POR SUBAPARTADO) -->
+          <div id="rt-charts-stage" class="rt-charts-stage hidden">
+            <article id="cardChartBars" class="chart-card">
               <div class="chart-card-header">
                 <div>
-                  <h3>Top Intereses Normalizados (Azure SQL <code>dbo.usuario_intereses</code>)</h3>
-                  <p class="panel-subtitle">Distribución de usuarios únicos vinculada mediante llave foránea.</p>
+                  <h3>Interacciones por Plataforma Digital</h3>
+                  <p class="panel-subtitle">Volumen y participación porcentual por canal de comunicación.</p>
                 </div>
-                <span class="chart-badge">SQL Relacional</span>
+                <span class="chart-badge">Tiempo Real</span>
               </div>
-              <div id="chartHistoricalInterests" class="echart-box-large"></div>
+              <div id="chartRealtimeBars" class="echart-box-large"></div>
+              <div id="summaryPillsBars" class="chart-footer-pills"></div>
             </article>
 
-            <article class="panel-card">
-              <div class="panel-header-flex">
-                <div>
-                  <h3>Desglose Analítico por Categoría de Interés</h3>
-                  <p class="panel-subtitle">Comparativa de usuarios activos, en riesgo y sentimiento promedio por afinidad.</p>
-                </div>
-              </div>
-              <div class="table-responsive">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Interés Normalizado</th>
-                      <th>Usuarios</th>
-                      <th>Activos</th>
-                      <th>En Riesgo</th>
-                      <th>Sentimiento Prom.</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tableInterestsDetailBody"></tbody>
-                </table>
-              </div>
-            </article>
-          </div>
-        </div>
-
-        <!-- SUBAPARTADO 2.2: PLATAFORMAS Y ESTATUS -->
-        <div id="hist-sub-platforms" class="subtab-pane">
-          <div class="split-chart-table">
-            <article class="chart-card">
+            <article id="cardChartDonut" class="chart-card">
               <div class="chart-card-header">
                 <div>
-                  <h3>Usuarios por Plataforma Principal y Estatus (Azure SQL)</h3>
-                  <p class="panel-subtitle">Segmentación de retención (activo, en_riesgo, inactivo) sobre el padrón depurado.</p>
+                  <h3>Distribución por Tipo de Interacción</h3>
+                  <p class="panel-subtitle">Proporción entre mensajes, comentarios, reacciones, encuestas y eventos.</p>
                 </div>
-                <span class="chart-badge">Padrón Depurado</span>
+                <span class="chart-badge">Tiempo Real</span>
               </div>
-              <div id="chartHistoricalPlatformStatus" class="echart-box-large"></div>
+              <div id="chartRealtimeDonut" class="echart-box-large"></div>
+              <div id="summaryPillsDonut" class="chart-footer-pills"></div>
             </article>
 
+            <article id="cardChartHeatmap" class="chart-card full-span">
+              <div class="chart-card-header">
+                <div>
+                  <h3>Mapa de Calor: Intensidad Cruzada Plataforma vs. Tipo</h3>
+                  <p class="panel-subtitle">Matriz bidimensional de concentración de actividad por canal y formato.</p>
+                </div>
+                <span class="chart-badge">Matriz de Intensidad</span>
+              </div>
+              <div id="chartRealtimeHeatmap" class="echart-box-tall"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- CATEGORÍA 2: COMUNIDAD Y RETENCIÓN                                  -->
+        <!-- =================================================================== -->
+        <section id="cat-historical" class="category-pane">
+          <div class="pane-toolbar">
+            <div class="pane-title-group">
+              <span class="section-tag">MÓDULO 02 · SEGMENTACIÓN Y RETENCIÓN</span>
+              <h2>Análisis de Afinidades, Plataformas y Riesgo de Abandono</h2>
+            </div>
+
+            <div class="subtab-bar" data-parent="cat-historical">
+              <button class="subtab-btn active" data-subtab="hist-sub-interests">
+                Intereses y Afinidades
+              </button>
+              <button class="subtab-btn" data-subtab="hist-sub-platforms">
+                Salud por Plataforma
+              </button>
+              <button class="subtab-btn" data-subtab="hist-sub-churn">
+                Prioridad de Retención
+              </button>
+            </div>
+          </div>
+
+          <!-- SUBAPARTADO 2.1: INTERESES -->
+          <div id="hist-sub-interests" class="subtab-pane active">
+            <div class="split-chart-table">
+              <article class="chart-card">
+                <div class="chart-card-header">
+                  <div>
+                    <h3>Distribución por Categoría de Interés</h3>
+                    <p class="panel-subtitle">Volumen de integrantes agrupados por afinidad principal.</p>
+                  </div>
+                  <span class="chart-badge">Histórico</span>
+                </div>
+                <div id="chartHistoricalInterests" class="echart-box-large"></div>
+              </article>
+
+              <article class="panel-card">
+                <div class="panel-header-flex">
+                  <div>
+                    <h3>Indicadores por Segmento de Interés</h3>
+                    <p class="panel-subtitle">Desglose de usuarios activos, en riesgo y sentimiento promedio.</p>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Categoría</th>
+                        <th>Usuarios</th>
+                        <th>Activos</th>
+                        <th>En Riesgo</th>
+                        <th>Sentimiento</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tableInterestsDetailBody"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- SUBAPARTADO 2.2: PLATAFORMAS Y ESTATUS -->
+          <div id="hist-sub-platforms" class="subtab-pane">
+            <div class="split-chart-table">
+              <article class="chart-card">
+                <div class="chart-card-header">
+                  <div>
+                    <h3>Segmentación por Plataforma y Estado</h3>
+                    <p class="panel-subtitle">Distribución comparativa de usuarios activos, en riesgo e inactivos.</p>
+                  </div>
+                  <span class="chart-badge">Padrón</span>
+                </div>
+                <div id="chartHistoricalPlatformStatus" class="echart-box-large"></div>
+              </article>
+
+              <article class="panel-card">
+                <div class="panel-header-flex">
+                  <div>
+                    <h3>Tasa de Retención por Plataforma</h3>
+                    <p class="panel-subtitle">Comparativa porcentual de permanencia activa en cada canal.</p>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Plataforma</th>
+                        <th>Activos</th>
+                        <th>En Riesgo</th>
+                        <th>Inactivos</th>
+                        <th>Total</th>
+                        <th>Retención</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tablePlatformStatusSummaryBody"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- SUBAPARTADO 2.3: TABLA DE RIESGO DE ABANDONO -->
+          <div id="hist-sub-churn" class="subtab-pane">
             <article class="panel-card">
               <div class="panel-header-flex">
                 <div>
-                  <h3>Matriz Relacional Plataforma × Estatus</h3>
-                  <p class="panel-subtitle">Conteo exacto y tasa de salud comunitaria por plataforma principal.</p>
+                  <h3>Monitor de Usuarios en Riesgo de Abandono</h3>
+                  <p class="panel-subtitle">
+                    Priorización calculada según inactividad, frecuencia de participación y sentimiento.
+                  </p>
+                </div>
+                <div class="filter-controls-bar">
+                  <input
+                    type="text"
+                    id="inputFilterRiesgo"
+                    class="compact-input"
+                    placeholder="Filtrar por identificador, alias o canal..."
+                    autocomplete="off"
+                  />
+                  <div class="filter-pills-group">
+                    <button class="filter-pill active" data-riesgo-filter="all">Todos</button>
+                    <button class="filter-pill" data-riesgo-filter="anonimizados">Ubicación Protegida</button>
+                    <button class="filter-pill" data-riesgo-filter="con-ubicacion">Ubicación Pública</button>
+                  </div>
                 </div>
               </div>
               <div class="table-responsive">
                 <table class="data-table">
                   <thead>
                     <tr>
+                      <th>ID</th>
+                      <th>Alias</th>
                       <th>Plataforma</th>
-                      <th>Activos</th>
-                      <th>En Riesgo</th>
-                      <th>Inactivos</th>
-                      <th>Total</th>
-                      <th>% Retención</th>
+                      <th>Interés</th>
+                      <th>Estado</th>
+                      <th>Actividad (30d)</th>
+                      <th>Sentimiento</th>
+                      <th>Privacidad Geográfica</th>
+                      <th>Índice Riesgo</th>
+                      <th>Acción</th>
                     </tr>
                   </thead>
-                  <tbody id="tablePlatformStatusSummaryBody"></tbody>
+                  <tbody id="tableRiesgoBody"></tbody>
                 </table>
               </div>
             </article>
           </div>
-        </div>
+        </section>
 
-        <!-- SUBAPARTADO 2.3: MONITOR DE RIESGO DE ABANDONO (CHURN) -->
-        <div id="hist-sub-churn" class="subtab-pane">
-          <article class="panel-card">
-            <div class="panel-header-flex">
-              <div>
-                <h3>Monitor de Usuarios en Riesgo de Abandono (Top Prioridad de Retención)</h3>
-                <p class="panel-subtitle">
-                  Ranking ponderado por inactividad, baja participación en 30 días y sentimiento. Selecciona cualquier usuario para abrir su expediente en Vista 360°.
-                </p>
-              </div>
-              <div class="filter-controls-bar">
+        <!-- =================================================================== -->
+        <!-- CATEGORÍA 3: EXPEDIENTE VISTA 360°                                  -->
+        <!-- =================================================================== -->
+        <section id="cat-vista360" class="category-pane">
+          <div class="pane-toolbar">
+            <div class="pane-title-group">
+              <span class="section-tag">MÓDULO 03 · INTELIGENCIA INDIVIDUAL</span>
+              <h2>Consulta de Expediente Vista 360°</h2>
+            </div>
+
+            <div class="subtab-bar" data-parent="cat-vista360">
+              <button class="subtab-btn active" data-subtab="v360-sub-split">
+                Vista Integral Dual
+              </button>
+              <button class="subtab-btn" data-subtab="v360-sub-sql">
+                Perfil y Afinidades
+              </button>
+              <button class="subtab-btn" data-subtab="v360-sub-cosmos">
+                Historial de Interacciones
+              </button>
+            </div>
+          </div>
+
+          <article class="panel-card search-command-card">
+            <div class="panel-header-flex no-margin">
+              <div class="search-360-bar">
                 <input
                   type="text"
-                  id="inputFilterRiesgo"
-                  class="compact-input"
-                  placeholder="Filtrar por ID, alias o plataforma..."
+                  id="inputVista360"
+                  placeholder="Ingrese el identificador del usuario a consultar..."
                   autocomplete="off"
                 />
-                <div class="filter-pills-group">
-                  <button class="filter-pill active" data-riesgo-filter="all">Todos</button>
-                  <button class="filter-pill" data-riesgo-filter="anonimizados">Solo Anonimizados</button>
-                  <button class="filter-pill" data-riesgo-filter="con-ubicacion">Con Ubicación</button>
+                <button id="btnBuscar360" class="btn-primary">Consultar Expediente</button>
+              </div>
+              <div id="dynamicQuickUsers" class="quick-presets-group"></div>
+            </div>
+          </article>
+
+          <div id="vista360Container" class="vista360-grid" data-view-mode="v360-sub-split"></div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- CATEGORÍA 4: GOBERNANZA, PRIVACIDAD Y CALIDAD DE DATOS              -->
+        <!-- =================================================================== -->
+        <section id="cat-governance" class="category-pane">
+          <div class="pane-toolbar">
+            <div class="pane-title-group">
+              <span class="section-tag">MÓDULO 04 · AUDITORÍA Y CUMPLIMIENTO</span>
+              <h2>Gobernanza del Pipeline ETL, Privacidad y Cuarentena</h2>
+            </div>
+
+            <div class="subtab-bar" data-parent="cat-governance">
+              <button class="subtab-btn active" data-subtab="gov-sub-etl">
+                Balance de Calidad ETL
+              </button>
+              <button class="subtab-btn" data-subtab="gov-sub-privacy">
+                Auditoría de Privacidad
+              </button>
+              <button class="subtab-btn" data-subtab="gov-sub-quarantine">
+                Registros en Cuarentena
+              </button>
+            </div>
+          </div>
+
+          <!-- SUBAPARTADO 4.1: BALANCE ETL -->
+          <div id="gov-sub-etl" class="subtab-pane active">
+            <article class="panel-card">
+              <div class="panel-header-flex">
+                <div>
+                  <h3>Métricas de Procesamiento y Depuración de Datos</h3>
+                  <p class="panel-subtitle">
+                    Resultado consolidado de validación, transformación, normalización y carga.
+                  </p>
                 </div>
+                <span id="etlRunBadgeId" class="chart-badge">Ejecución Verificada</span>
               </div>
-            </div>
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID Usuario</th>
-                    <th>Alias</th>
-                    <th>Plataforma</th>
-                    <th>Interés Principal</th>
-                    <th>Estatus</th>
-                    <th>Actividad (30d)</th>
-                    <th>Sentimiento</th>
-                    <th>Privacidad / Ubicación</th>
-                    <th>Índice Riesgo</th>
-                    <th>Expediente</th>
-                  </tr>
-                </thead>
-                <tbody id="tableRiesgoBody"></tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- =================================================================== -->
-      <!-- CATEGORÍA 3: INTELIGENCIA DE USUARIO · VISTA 360° HÍBRIDA           -->
-      <!-- =================================================================== -->
-      <section id="cat-vista360" class="category-pane">
-        <div class="pane-toolbar">
-          <div class="pane-title-group">
-            <span class="section-tag">CATEGORÍA 03 · CONSULTA HÍBRIDA EN PARALELO (AZURE SQL + COSMOS DB)</span>
-            <h2>Expediente Ejecutivo Vista 360° por Usuario</h2>
+              <div id="etlSummaryMetrics" class="etl-metrics-boxes"></div>
+            </article>
           </div>
 
-          <div class="subtab-bar" data-parent="cat-vista360">
-            <button class="subtab-btn active" data-subtab="v360-sub-split">
-              Vista Integral Híbrida
-            </button>
-            <button class="subtab-btn" data-subtab="v360-sub-sql">
-              Perfil e Intereses (Azure SQL)
-            </button>
-            <button class="subtab-btn" data-subtab="v360-sub-cosmos">
-              Historial Documental (Cosmos DB)
-            </button>
-          </div>
-        </div>
-
-        <!-- BARRA DE BÚSQUEDA Y ACCESOS RÁPIDOS DE VISTA 360 -->
-        <article class="panel-card search-command-card">
-          <div class="panel-header-flex no-margin">
-            <div class="search-360-bar">
-              <input
-                type="text"
-                id="inputVista360"
-                placeholder="Ingrese ID Usuario (ej. U000852, U000004, U000176)"
-                autocomplete="off"
-              />
-              <button id="btnBuscar360" class="btn-primary">Consultar Vista 360°</button>
-            </div>
-            <div class="quick-presets-group">
-              <span class="preset-label">Perfiles de demostración:</span>
-              <button class="btn-chip" data-userid="U000852">U000852 (Con interacción)</button>
-              <button class="btn-chip" data-userid="U000004">U000004 (Anonimizado: consentimiento=no)</button>
-              <button class="btn-chip" data-userid="U000176">U000176 (Multietiqueta)</button>
-              <button class="btn-chip" data-userid="U000001">U000001 (Artista Digital)</button>
-            </div>
-          </div>
-        </article>
-
-        <!-- CONTENEDOR DINÁMICO DE VISTA 360 -->
-        <div id="vista360Container" class="vista360-grid" data-view-mode="v360-sub-split"></div>
-      </section>
-
-      <!-- =================================================================== -->
-      <!-- CATEGORÍA 4: GOBERNANZA ETL, PRIVACIDAD Y CUARENTENA                -->
-      <!-- =================================================================== -->
-      <section id="cat-governance" class="category-pane">
-        <div class="pane-toolbar">
-          <div class="pane-title-group">
-            <span class="section-tag">CATEGORÍA 04 · AUDITORÍA DE CALIDAD DE DATOS Y PRIVACIDAD</span>
-            <h2>Gobernanza del Pipeline ETL, Anonimización y Cuarentena</h2>
-          </div>
-
-          <div class="subtab-bar" data-parent="cat-governance">
-            <button class="subtab-btn active" data-subtab="gov-sub-etl">
-              Métricas de Calidad y Bitácora ETL
-            </button>
-            <button class="subtab-btn" data-subtab="gov-sub-privacy">
-              Cumplimiento de Privacidad Geográfica
-            </button>
-            <button class="subtab-btn" data-subtab="gov-sub-quarantine">
-              Inspección de Cuarentena (Cosmos DB)
-            </button>
-          </div>
-        </div>
-
-        <!-- SUBAPARTADO 4.1: MÉTRICAS DE CALIDAD Y BITÁCORA ETL -->
-        <div id="gov-sub-etl" class="subtab-pane active">
-          <article class="panel-card">
-            <div class="panel-header-flex">
-              <div>
-                <h3>Balance de Ejecución del Pipeline ETL Híbrido (Antes vs. Después)</h3>
-                <p class="panel-subtitle">
-                  Trazabilidad auditada en el contenedor <code>bitacora_etl</code> de Azure Cosmos DB.
-                </p>
+          <!-- SUBAPARTADO 4.2: PRIVACIDAD GEOGRÁFICA -->
+          <div id="gov-sub-privacy" class="subtab-pane">
+            <article class="panel-card">
+              <div class="panel-header-flex">
+                <div>
+                  <h3>Cumplimiento de Anonimización Geográfica</h3>
+                  <p class="panel-subtitle">
+                    Verificación de supresión de atributos de ubicación para usuarios sin consentimiento de geolocalización.
+                  </p>
+                </div>
+                <span class="tag-pill privacy-alert">Política de Privacidad Activa</span>
               </div>
-              <span id="etlRunBadgeId" class="chart-badge">Bitácora Activa</span>
-            </div>
-            <div id="etlSummaryMetrics" class="etl-metrics-boxes"></div>
-          </article>
-        </div>
+              <div id="privacyExampleBox" class="privacy-example-box"></div>
+            </article>
+          </div>
 
-        <!-- SUBAPARTADO 4.2: EVIDENCIA DE PRIVACIDAD GEOGRÁFICA -->
-        <div id="gov-sub-privacy" class="subtab-pane">
-          <article class="panel-card">
-            <div class="panel-header-flex">
-              <div>
-                <h3>Cumplimiento de Privacidad Obligatoria (<code>consentimiento_datos = "no"</code>)</h3>
-                <p class="panel-subtitle">
-                  Anulación preventiva de país, estado, ciudad, coordenadas y zona horaria antes de persistir en Azure SQL o graficar.
-                </p>
+          <!-- SUBAPARTADO 4.3: CUARENTENA -->
+          <div id="gov-sub-quarantine" class="subtab-pane">
+            <article class="panel-card">
+              <div class="panel-header-flex">
+                <div>
+                  <h3>Inspección de Registros Retenidos en Cuarentena</h3>
+                  <p class="panel-subtitle">
+                    Trazabilidad de eventos descartados por integridad referencial o validación de esquema.
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  id="inputFilterCuarentena"
+                  class="compact-input"
+                  placeholder="Filtrar por registro o usuario..."
+                  autocomplete="off"
+                />
               </div>
-              <span class="tag-pill privacy-alert">Protección Geográfica Activa</span>
-            </div>
-            <div id="privacyExampleBox" class="privacy-example-box"></div>
-          </article>
-        </div>
-
-        <!-- SUBAPARTADO 4.3: INSPECCIÓN DE CUARENTENA EN COSMOS DB -->
-        <div id="gov-sub-quarantine" class="subtab-pane">
-          <article class="panel-card">
-            <div class="panel-header-flex">
-              <div>
-                <h3>Contenedor de Cuarentena en Azure Cosmos DB (<code>/api/cuarentena</code>)</h3>
-                <p class="panel-subtitle">
-                  Política de cero borrado silencioso: registros retenidos por integridad referencial huérfana, duplicidad o formato inválido.
-                </p>
+              <div id="cuarentenaReasonsBox" class="reasons-badges"></div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID Registro</th>
+                      <th>Usuario Asociado</th>
+                      <th>Origen</th>
+                      <th>Causa de Retención</th>
+                      <th>Línea</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tableCuarentenaBody"></tbody>
+                </table>
               </div>
-              <input
-                type="text"
-                id="inputFilterCuarentena"
-                class="compact-input"
-                placeholder="Buscar por ID registro o ID usuario..."
-                autocomplete="off"
-              />
-            </div>
-            <div id="cuarentenaReasonsBox" class="reasons-badges"></div>
-            <div class="table-responsive">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>ID Registro</th>
-                    <th>ID Usuario</th>
-                    <th>Archivo Origen</th>
-                    <th>Motivo de Rechazo</th>
-                    <th>Línea CSV</th>
-                  </tr>
-                </thead>
-                <tbody id="tableCuarentenaBody"></tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-      </section>
+            </article>
+          </div>
+        </section>
 
-    </main>
+      </main>
+    </div>
   </div>
 
   <script src="/js/app.js"></script>

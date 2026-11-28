@@ -1,6 +1,5 @@
 (() => {
-  // Pegar aquí la URL pública del backend desplegado en Railway (sin barra diagonal al final)
-  const RAILWAY_BACKEND_URL = 'https://REEMPLAZAR-CON-TU-BACKEND.up.railway.app';
+  const RAILWAY_BACKEND_URL = 'https://community-360-bden-production.up.railway.app';
 
   const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
     ? 'http://localhost:3000'
@@ -28,6 +27,7 @@
   let cachedRiesgoUsers = [];
   let cachedCuarentenaRows = [];
   let currentRiesgoFilter = 'all';
+  let activeVista360Id = null;
 
   function getToken() {
     return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
@@ -94,7 +94,7 @@
   }
 
   // =========================================================
-  // NAVEGACIÓN DE CATEGORÍAS Y SUBAPARTADOS (PESTAÑAS)
+  // NAVEGACIÓN DE CATEGORÍAS Y SUBAPARTADOS
   // =========================================================
   function switchCategory(categoryId) {
     document.querySelectorAll('.cat-tab-btn').forEach((btn) => {
@@ -172,7 +172,7 @@
   }
 
   // =========================================================
-  // ACTUALIZACIÓN EN TIEMPO REAL (SOCKET.IO / WEBSOCKETS)
+  // ACTUALIZACIÓN EN TIEMPO REAL (WEBSOCKETS)
   // =========================================================
   function updateRealtimeUI(payload) {
     if (!payload || !payload.kpis) return;
@@ -180,18 +180,16 @@
 
     const { kpis, series, recentInteractions, evento } = payload;
 
-    // Badges en barra de navegación superior
     document.getElementById('badgeNavTotalInter').textContent = kpis.totalInteracciones.toLocaleString('es-MX');
     document.getElementById('badgeNavRiesgo').textContent = `${kpis.indiceRiesgoAbandono}%`;
 
-    // 1. Actualizar KPIs en vivo
     document.getElementById('kpiTotalInteracciones').textContent = kpis.totalInteracciones.toLocaleString('es-MX');
     document.getElementById('kpiPromedioInteracciones').textContent =
       `${kpis.promedioInteraccionesParticipante} prom. por participante (${kpis.promedioInteraccionesGlobal} global)`;
 
     document.getElementById('kpiTasaParticipacion').textContent = `${kpis.tasaParticipacionActiva}%`;
     document.getElementById('kpiUsuariosActivos').textContent =
-      `${kpis.usuariosActivos.toLocaleString('es-MX')} activos de ${kpis.totalUsuarios.toLocaleString('es-MX')} usuarios SQL`;
+      `${kpis.usuariosActivos.toLocaleString('es-MX')} activos de ${kpis.totalUsuarios.toLocaleString('es-MX')} registrados`;
     document.getElementById('barKpiTpa').style.width = `${Math.min(100, kpis.tasaParticipacionActiva)}%`;
 
     document.getElementById('kpiIndiceRiesgo').textContent = `${kpis.indiceRiesgoAbandono}%`;
@@ -202,7 +200,7 @@
     document.getElementById('kpiUsuariosConInteraccion').textContent =
       kpis.usuariosConInteraccion.toLocaleString('es-MX');
     document.getElementById('kpiTasaInteraccionDirecta').textContent =
-      `${kpis.tasaInteraccionDirecta}% cobertura activa en Cosmos DB`;
+      `${kpis.tasaInteraccionDirecta}% cobertura activa`;
     document.getElementById('barKpiDirecta').style.width = `${Math.min(100, kpis.tasaInteraccionDirecta)}%`;
 
     document.getElementById('kpiSentimientoPromedio').textContent = kpis.sentimientoPromedioInteracciones;
@@ -213,9 +211,8 @@
 
     document.getElementById('kpiTotalUsuariosSql').textContent = kpis.totalUsuarios.toLocaleString('es-MX');
     document.getElementById('kpiPromedioGlobal').textContent =
-      `${kpis.promedioInteraccionesGlobal} interacciones / usuario padrón`;
+      `${kpis.promedioInteraccionesGlobal} interacciones / usuario`;
 
-    // 2. Actualizar log discreto del último evento WebSocket (POST/PUT/DELETE/SNAPSHOT)
     if (evento) {
       const op = String(evento.operacion || 'SNAPSHOT').toUpperCase();
       const badge = document.getElementById('eventBadge');
@@ -232,14 +229,13 @@
         void logBox.offsetWidth;
         logBox.classList.add('pulse-update');
       } else {
-        desc.textContent = evento.detalle || 'Indicadores sincronizados en tiempo real';
+        desc.textContent = 'Indicadores sincronizados en tiempo real';
       }
 
       const d = evento.timestamp ? new Date(evento.timestamp) : new Date();
       timeEl.textContent = d.toLocaleTimeString('es-MX');
     }
 
-    // Stream de últimas 8 interacciones
     const streamBody = document.getElementById('tableRecentStreamBody');
     if (streamBody && Array.isArray(recentInteractions)) {
       streamBody.innerHTML = recentInteractions
@@ -265,9 +261,27 @@
           loadVista360(uid);
         });
       });
+
+      // Generar accesos dinámicos en Vista 360 basados en los usuarios activos del stream (sin IDs estáticos en HTML)
+      const quickBox = document.getElementById('dynamicQuickUsers');
+      if (quickBox && recentInteractions.length > 0) {
+        const uniqueUsers = [...new Set(recentInteractions.map((r) => r.id_usuario))].slice(0, 4);
+        quickBox.innerHTML = uniqueUsers
+          .map((uid) => `<button class="btn-chip" data-userid="${uid}">${uid}</button>`)
+          .join('');
+        quickBox.querySelectorAll('.btn-chip').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document.getElementById('inputVista360').value = '';
+            loadVista360(btn.getAttribute('data-userid'));
+          });
+        });
+
+        if (!activeVista360Id && uniqueUsers[0]) {
+          loadVista360(uniqueUsers[0]);
+        }
+      }
     }
 
-    // Desglose de temas en vivo
     const temasBox = document.getElementById('liveTemasBreakdown');
     if (temasBox && Array.isArray(series.temasInteraccion)) {
       temasBox.innerHTML = series.temasInteraccion
@@ -287,7 +301,6 @@
         .join('');
     }
 
-    // 3. Gráfica 1: Barras en vivo (Interacciones por Plataforma)
     const barrasData = series.barrasPlataforma || [];
     document.getElementById('summaryPillsBars').innerHTML = barrasData
       .map((d) => `<span class="stat-chip">${d.plataforma}: <strong>${d.total}</strong> (${d.porcentaje}%)</span>`)
@@ -342,7 +355,6 @@
       ]
     });
 
-    // 4. Gráfica 2: Dona en vivo (Distribución por Tipo de Interacción)
     const donaData = series.donaTipoInteraccion || [];
     document.getElementById('summaryPillsDonut').innerHTML = donaData
       .map((d) => `<span class="stat-chip">${d.tipo}: <strong>${d.total}</strong> (${d.porcentaje}%)</span>`)
@@ -370,7 +382,7 @@
           center: ['50%', '45%'],
           avoidLabelOverlap: true,
           itemStyle: {
-            borderColor: '#101015',
+            borderColor: '#121218',
             borderWidth: 3,
             borderRadius: 6
           },
@@ -386,7 +398,6 @@
       ]
     });
 
-    // 5. Gráfica 3: Mapa de Calor (Plataforma vs. Tipo de Interacción)
     const hm = series.heatmap || { plataformas: [], tipos: [], matrix: [], max: 10 };
     chartRealtimeHeatmap.setOption({
       backgroundColor: 'transparent',
@@ -450,7 +461,7 @@
   }
 
   // =========================================================
-  // RENDERIZADO REACTIVO DE TABLAS CON FILTROS EN VIVO
+  // TABLAS CON FILTROS REACTIVOS
   // =========================================================
   function renderRiesgoTable() {
     const tbodyRiesgo = document.getElementById('tableRiesgoBody');
@@ -473,7 +484,7 @@
       .map((u) => {
         const noConsent = String(u.consentimiento_datos).toLowerCase() === 'no';
         const ubicacionCell = noConsent
-          ? '<span class="tag-pill privacy-alert">ANONIMIZADO (consentimiento=no)</span>'
+          ? '<span class="tag-pill privacy-alert">Ubicación Protegida</span>'
           : `${u.ciudad || 'N/A'}, ${u.pais || ''}`;
 
         return `
@@ -487,7 +498,7 @@
             <td>${u.sentimiento_promedio}</td>
             <td>${ubicacionCell}</td>
             <td><strong>${u.indice_riesgo}%</strong></td>
-            <td><button class="btn-table-action" data-open360="${u.id_usuario}">Abrir 360° →</button></td>
+            <td><button class="btn-table-action" data-open360="${u.id_usuario}">Ver 360° →</button></td>
           </tr>
         `;
       })
@@ -532,7 +543,7 @@
   }
 
   // =========================================================
-  // ANALÍTICA HISTÓRICA HÍBRIDA (REST)
+  // ANALÍTICA HISTÓRICA
   // =========================================================
   async function loadHistoricalAnalytics() {
     ensureChartsInitialized();
@@ -541,7 +552,6 @@
       apiFetch('/api/cuarentena?limit=60')
     ]);
 
-    // 1. Gráfica y tabla de Top Intereses (Azure SQL usuario_intereses)
     const intereses = histData.topIntereses || [];
     chartHistoricalInterests.setOption({
       backgroundColor: 'transparent',
@@ -600,7 +610,6 @@
       )
       .join('');
 
-    // 2. Gráfica y tabla de Usuarios por Plataforma y Estatus (Azure SQL)
     const rawPlatStatus = histData.usuariosPorPlataformaEstado || [];
     const plataformasSet = [...new Set(rawPlatStatus.map((r) => r.plataforma))];
     const estatusList = ['activo', 'en_riesgo', 'inactivo'];
@@ -669,11 +678,9 @@
       })
       .join('');
 
-    // 3. Tabla de Usuarios en Riesgo de Abandono
     cachedRiesgoUsers = histData.usuariosEnRiesgo || [];
     renderRiesgoTable();
 
-    // 4. Resumen de Calidad ETL, Privacidad y Bitácora
     const ultima = histData.calidadEtl?.ultimaEjecucion;
     const summaryContainer = document.getElementById('etlSummaryMetrics');
     const privacyBox = document.getElementById('privacyExampleBox');
@@ -682,45 +689,45 @@
       const tg = ultima.totales_globales;
       const avd = ultima.antes_vs_despues;
       document.getElementById('badgeNavCuarentena').textContent = tg.en_cuarentena.toLocaleString('es-MX');
-      document.getElementById('etlRunBadgeId').textContent = `${ultima.id} (${ultima.duracion_ms} ms)`;
+      document.getElementById('etlRunBadgeId').textContent = `Procesado en ${ultima.duracion_ms} ms`;
 
       summaryContainer.innerHTML = `
         <div class="mini-stat">
-          <span>Total Recibidos (Raw CSV)</span>
+          <span>Registros Recibidos</span>
           <strong>${tg.recibidos.toLocaleString('es-MX')}</strong>
         </div>
         <div class="mini-stat">
-          <span>Total Aceptados (Nube)</span>
+          <span>Registros Válidos</span>
           <strong>${tg.aceptados.toLocaleString('es-MX')}</strong>
         </div>
         <div class="mini-stat">
-          <span>En Cuarentena (Cosmos)</span>
+          <span>Registros en Cuarentena</span>
           <strong>${tg.en_cuarentena.toLocaleString('es-MX')}</strong>
         </div>
         <div class="mini-stat">
-          <span>Usuarios Anonimizados</span>
+          <span>Perfiles Anonimizados</span>
           <strong>${avd?.usuarios?.anonimizados_sin_consentimiento ?? 0}</strong>
         </div>
         <div class="mini-stat">
-          <span>Intereses Normalizados SQL</span>
+          <span>Relaciones de Interés</span>
           <strong>${avd?.usuarios?.intereses_normalizados_sql ?? 0}</strong>
         </div>
         <div class="mini-stat">
-          <span>Interacciones Huérfanas</span>
+          <span>Eventos Huérfanos</span>
           <strong>${avd?.interacciones?.huerfanos_integridad_referencial ?? 0}</strong>
         </div>
       `;
 
       if (ultima.ejemplo_anonimizacion) {
         privacyBox.innerHTML = `
-          <div><strong>Evidencia de Anonimización Preventiva en el Pipeline ETL (<code>consentimiento_datos = "no"</code>)</strong></div>
+          <div><strong>Comparativa de Supresión de Ubicación por Consentimiento</strong></div>
           <div class="privacy-compare">
             <div>
-              <span>ANTES (Registro original en CSV crudo):</span>
+              <span>ANTES (Datos de Entrada):</span>
               <pre>${JSON.stringify(ultima.ejemplo_anonimizacion.antes, null, 2)}</pre>
             </div>
             <div>
-              <span>DESPUÉS (Registro persistido en Azure SQL Database):</span>
+              <span>DESPUÉS (Registro Anonimizado):</span>
               <pre>${JSON.stringify(ultima.ejemplo_anonimizacion.despues, null, 2)}</pre>
             </div>
           </div>
@@ -728,7 +735,6 @@
       }
     }
 
-    // 5. Tabla y desglose de Cuarentena
     const motivos = histData.calidadEtl?.porMotivo || {};
     document.getElementById('cuarentenaReasonsBox').innerHTML = Object.entries(motivos)
       .map(
@@ -743,19 +749,20 @@
   }
 
   // =========================================================
-  // INTELIGENCIA DE USUARIO · VISTA 360° HÍBRIDA
+  // EXPEDIENTE VISTA 360°
   // =========================================================
   async function loadVista360(idUsuario) {
     const cleanId = String(idUsuario || '').trim().toUpperCase();
     if (!cleanId) return;
 
+    activeVista360Id = cleanId;
     document.getElementById('badgeNavCurrent360').textContent = cleanId;
-    document.querySelectorAll('.btn-chip[data-userid]').forEach((b) => {
+    document.querySelectorAll('#dynamicQuickUsers .btn-chip').forEach((b) => {
       b.classList.toggle('active', b.getAttribute('data-userid') === cleanId);
     });
 
     const container = document.getElementById('vista360Container');
-    container.innerHTML = '<div class="v360-box">Consultando expediente híbrido en paralelo (Azure SQL + Cosmos DB)...</div>';
+    container.innerHTML = '<div class="v360-box">Consultando expediente integral del usuario...</div>';
 
     try {
       const data = await apiFetch(`/api/usuarios/${encodeURIComponent(cleanId)}/vista-360`);
@@ -764,19 +771,19 @@
       const intereses = data.intereses_normalizados || [];
 
       const ubicacionDisplay = p.privacidad_aplicada
-        ? '<span class="tag-pill privacy-alert">NULL (Ubicación protegida por consentimiento_datos = no)</span>'
+        ? '<span class="tag-pill privacy-alert">Ubicación Protegida por Privacidad</span>'
         : `${p.ciudad || 'Sin ciudad'}, ${p.estado || ''}, ${p.pais || ''} (${p.latitud ?? 'N/A'}, ${p.longitud ?? 'N/A'})`;
 
       const historialHtml =
         doc.historial.length === 0
-          ? '<p class="panel-subtitle">Este usuario no registra interacciones individuales en el contenedor documental de Cosmos DB.</p>'
+          ? '<p class="panel-subtitle">Este perfil no registra eventos individuales en el historial de actividad.</p>'
           : `
             <div class="table-responsive">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>ID Interacción</th>
-                    <th>Timestamp</th>
+                    <th>ID Evento</th>
+                    <th>Fecha / Hora</th>
                     <th>Canal</th>
                     <th>Tipo</th>
                     <th>Tema</th>
@@ -809,25 +816,25 @@
         <div class="v360-box v360-sql-pane">
           <div class="v360-header">
             <div>
-              <strong>Perfil Relacional (Azure SQL Database)</strong> · <code>${p.id_usuario}</code>
+              <strong>Ficha de Perfil</strong> · <code>${p.id_usuario}</code>
             </div>
             <span class="badge-status ${p.estatus}">${p.estatus}</span>
           </div>
           <div class="v360-kv-grid">
             <div class="v360-kv-item"><span>Alias</span><strong>${p.alias}</strong></div>
             <div class="v360-kv-item"><span>Plataforma Principal</span><strong>${p.plataforma_principal}</strong></div>
-            <div class="v360-kv-item"><span>Especie / Rango Edad</span><strong>${p.especie_fursona} (${p.rango_edad})</strong></div>
+            <div class="v360-kv-item"><span>Categoría / Rango Edad</span><strong>${p.especie_fursona} (${p.rango_edad})</strong></div>
             <div class="v360-kv-item"><span>Índice Riesgo Abandono</span><strong>${p.indice_riesgo_abandono}%</strong></div>
-            <div class="v360-kv-item"><span>Actividad 30d (SQL)</span><strong>${p.mensajes_30d} msg · ${p.reacciones_30d} reacc</strong></div>
-            <div class="v360-kv-item"><span>Consentimiento Datos</span><strong>${p.consentimiento_datos.toUpperCase()}</strong></div>
+            <div class="v360-kv-item"><span>Actividad 30d</span><strong>${p.mensajes_30d} msg · ${p.reacciones_30d} reacc</strong></div>
+            <div class="v360-kv-item"><span>Consentimiento</span><strong>${p.consentimiento_datos.toUpperCase()}</strong></div>
             <div class="v360-kv-item" style="grid-column: 1 / -1;">
-              <span>Ubicación Geográfica y Coordenadas</span>
+              <span>Ubicación Geográfica</span>
               <div style="margin-top: 4px;">${ubicacionDisplay}</div>
             </div>
           </div>
           <div style="margin-top: 16px;">
-            <span style="font-size: 0.74rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
-              Intereses y Etiquetas Normalizadas (<code>dbo.usuario_intereses</code>)
+            <span style="font-size: 0.73rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
+              Intereses y Etiquetas Asociadas
             </span>
             <div class="tag-list">
               ${intereses
@@ -840,9 +847,9 @@
         <div class="v360-box v360-cosmos-pane">
           <div class="v360-header">
             <div>
-              <strong>Actividad Documental (Azure Cosmos DB for NoSQL)</strong>
+              <strong>Historial de Actividad</strong>
             </div>
-            <span class="chart-badge">${doc.total_interacciones} interacciones</span>
+            <span class="chart-badge">${doc.total_interacciones} eventos</span>
           </div>
           ${historialHtml}
         </div>
@@ -867,17 +874,17 @@
 
     socket.on('connect', () => {
       wsStatusPill.className = 'status-pill connected';
-      wsStatusText.textContent = 'WebSocket: Conectado en Vivo';
+      wsStatusText.textContent = 'Tiempo Real: Conectado';
     });
 
     socket.on('disconnect', () => {
       wsStatusPill.className = 'status-pill disconnected';
-      wsStatusText.textContent = 'WebSocket: Desconectado';
+      wsStatusText.textContent = 'Tiempo Real: Desconectado';
     });
 
     socket.on('connect_error', () => {
       wsStatusPill.className = 'status-pill disconnected';
-      wsStatusText.textContent = 'WebSocket: Error de Autenticación';
+      wsStatusText.textContent = 'Tiempo Real: Reconectando';
     });
 
     socket.on('dashboard:update', (snapshot) => {
@@ -898,13 +905,14 @@
     }
     clearToken();
     clearLoginInputs();
+    activeVista360Id = null;
     dashboardView.classList.add('hidden');
     loginView.classList.remove('hidden');
   }
 
   async function enterDashboard(user) {
     clearLoginInputs();
-    adminEmailLabel.textContent = `${user.email} (${user.rol})`;
+    adminEmailLabel.textContent = user.rol ? `${user.rol.toUpperCase()}` : 'SESIÓN AUTORIZADA';
     loginView.classList.add('hidden');
     dashboardView.classList.remove('hidden');
 
@@ -913,8 +921,7 @@
 
     const [realtimeSnap] = await Promise.all([
       apiFetch('/api/analytics/realtime'),
-      loadHistoricalAnalytics(),
-      loadVista360('U000852')
+      loadHistoricalAnalytics()
     ]);
     updateRealtimeUI(realtimeSnap);
   }
@@ -950,11 +957,11 @@
   });
 
   refreshHistoricalBtn.addEventListener('click', async () => {
-    const [realtimeSnap] = await Promise.all([
-      apiFetch('/api/analytics/realtime'),
-      loadHistoricalAnalytics(),
-      loadVista360(document.getElementById('badgeNavCurrent360').textContent || 'U000852')
-    ]);
+    const tasks = [apiFetch('/api/analytics/realtime'), loadHistoricalAnalytics()];
+    if (activeVista360Id) {
+      tasks.push(loadVista360(activeVista360Id));
+    }
+    const [realtimeSnap] = await Promise.all(tasks);
     updateRealtimeUI(realtimeSnap);
   });
 
@@ -973,14 +980,6 @@
       inputEl.value = '';
       await loadVista360(targetId);
     }
-  });
-
-  document.querySelectorAll('.btn-chip[data-userid]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const uid = btn.getAttribute('data-userid');
-      document.getElementById('inputVista360').value = '';
-      await loadVista360(uid);
-    });
   });
 
   document.getElementById('inputFilterRiesgo')?.addEventListener('input', renderRiesgoTable);
