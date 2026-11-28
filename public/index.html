@@ -559,14 +559,17 @@
                 </div>
 
                 <div class="tactical-mode-controls">
+                  <button id="btnTacticalZoomToggle" class="tactical-btn active">
+                    🌐 MAPA GLOBAL 360°
+                  </button>
                   <button id="btnTacticalModeBefore" class="tactical-btn">
-                    [01] ESCANEO PRE-ETL (DATOS CRUDOS)
+                    [01] ESCANEO PRE-ETL (CRUDO)
                   </button>
                   <button id="btnTacticalModeAfter" class="tactical-btn active">
-                    [02] ESCUDO POST-ETL (PRIVACIDAD ACTIVA)
+                    [02] ESCUDO POST-ETL (PRIVACIDAD)
                   </button>
                   <button id="btnTacticalCycleTarget" class="tactical-btn cyan-outline">
-                    ⊕ CAMBIAR OBJETIVO SATELITAL
+                    ⊕ SIGUIENTE OBJETIVO
                   </button>
                 </div>
               </div>
@@ -618,7 +621,7 @@
                     <span>SHIELDED NODES: <strong id="hudShieldedNodesCount">171</strong></span>
                   </div>
 
-                  <canvas id="tacticalGeoCanvas" width="860" height="440"></canvas>
+                  <canvas id="tacticalGeoCanvas" width="960" height="500"></canvas>
 
                   <div class="hud-overlay-bottom">
                     <div id="hudAlertBanner" class="hud-alert-banner">

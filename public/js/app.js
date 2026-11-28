@@ -131,30 +131,128 @@
   // =========================================================
   // SISTEMA DE GEOLOCALIZACIÓN SATELITAL G.I. JOE (ZEUS-360)
   // =========================================================
+  let tacticalGlobalView = true; // true = Mapa Global 360°, false = Zoom Teatro Transatlántico
+  let dotPatternCache = null;
+  let orbitPhase = 0;
+
+  function getDotMatrixPattern(ctx) {
+    if (dotPatternCache) return dotPatternCache;
+    const off = document.createElement('canvas');
+    off.width = 7;
+    off.height = 7;
+    const octx = off.getContext('2d');
+    octx.fillStyle = 'rgba(6, 182, 212, 0.08)';
+    octx.fillRect(0, 0, 7, 7);
+    octx.fillStyle = 'rgba(34, 211, 238, 0.42)';
+    octx.beginPath();
+    octx.arc(3.5, 3.5, 1.15, 0, Math.PI * 2);
+    octx.fill();
+    dotPatternCache = ctx.createPattern(off, 'repeat');
+    return dotPatternCache;
+  }
+
   function latLngToCanvas(lat, lng, width, height) {
-    // Enfoque táctico sobre América y Europa Occidental (lat: -45 a 50, lng: -130 a 10)
-    const minLng = -128;
-    const maxLng = 8;
-    const minLat = -44;
-    const maxLat = 48;
-    const x = ((lng - minLng) / (maxLng - minLng)) * (width - 80) + 40;
-    const y = ((maxLat - lat) / (maxLat - minLat)) * (height - 70) + 35;
+    const padX = 36;
+    const padY = 30;
+    const minLng = tacticalGlobalView ? -180 : -128;
+    const maxLng = tacticalGlobalView ? 180 : 18;
+    const minLat = tacticalGlobalView ? -62 : -46;
+    const maxLat = tacticalGlobalView ? 78 : 54;
+
+    const x = ((lng - minLng) / (maxLng - minLng)) * (width - padX * 2) + padX;
+    const y = ((maxLat - lat) / (maxLat - minLat)) * (height - padY * 2) + padY;
     return {
-      x: Math.max(36, Math.min(width - 36, x)),
-      y: Math.max(36, Math.min(height - 36, y))
+      x: Math.max(padX, Math.min(width - padX, x)),
+      y: Math.max(padY, Math.min(height - padY, y))
     };
   }
 
-  // Siluetas vectoriales continentales simplificadas para el visor orbital
+  // Cartografía vectorial planetaria de alta densidad (Todos los continentes e islas mayores)
   const TACTICAL_LAND_POLYGONS = [
-    // Norteamérica y México
-    [[-124, 48], [-123, 37], [-117, 32], [-110, 23], [-105, 20], [-97, 16], [-92, 15], [-87, 21], [-90, 21], [-97, 26], [-95, 29], [-82, 25], [-80, 32], [-74, 40], [-70, 45], [-95, 48]],
-    // Centroamérica y Caribe
-    [[-92, 15], [-83, 9], [-77, 8], [-79, 9], [-83, 15], [-88, 18]],
-    // Sudamérica
-    [[-77, 8], [-81, -5], [-77, -12], [-71, -18], [-71, -33], [-73, -42], [-65, -42], [-58, -35], [-52, -32], [-43, -23], [-35, -6], [-50, 0], [-62, 10], [-75, 11]],
-    // Península Ibérica / Europa Occidental
-    [[-9, 37], [-9, 43], [-2, 43], [3, 42], [0, 38], [-6, 36]]
+    // Norteamérica (Alaska, Canadá, EE.UU., México, Baja California y Yucatán)
+    [
+      [-166, 60], [-162, 66], [-156, 71], [-140, 70], [-128, 70], [-115, 73], [-95, 74],
+      [-82, 74], [-78, 68], [-82, 63], [-92, 62], [-94, 58], [-80, 54], [-78, 61],
+      [-65, 62], [-62, 54], [-55, 51], [-60, 46], [-67, 45], [-70, 42], [-74, 40],
+      [-76, 35], [-80, 32], [-81, 25], [-83, 29], [-89, 30], [-95, 29], [-97, 26],
+      [-97, 21], [-94, 18], [-90, 21], [-87, 21], [-88, 18], [-92, 15], [-97, 16],
+      [-105, 20], [-109, 25], [-114, 30], [-110, 23], [-115, 28], [-117, 33],
+      [-122, 37], [-124, 43], [-124, 48], [-130, 54], [-138, 59], [-148, 61], [-155, 58]
+    ],
+    // Centroamérica
+    [
+      [-92, 15], [-88, 18], [-83, 15], [-83, 11], [-79, 9], [-77, 8],
+      [-80, 7], [-83, 9], [-87, 12], [-90, 14]
+    ],
+    // Cuba y Antillas Mayores
+    [[-85, 22], [-80, 23], [-74, 20], [-78, 20], [-82, 22]],
+    [[-74, 19], [-68, 19], [-69, 18], [-74, 18]],
+    // Groenlandia e Islandia
+    [[-52, 60], [-55, 68], [-60, 76], [-45, 82], [-22, 81], [-18, 74], [-24, 68], [-38, 64], [-44, 60]],
+    [[-24, 64], [-22, 66], [-14, 66], [-14, 64]],
+    // Sudamérica completa
+    [
+      [-77, 9], [-75, 11], [-71, 12], [-62, 11], [-58, 7], [-52, 4], [-48, -1],
+      [-41, -3], [-35, -6], [-35, -10], [-39, -15], [-40, -22], [-44, -23],
+      [-48, -26], [-52, -33], [-58, -35], [-57, -38], [-62, -40], [-65, -44],
+      [-67, -50], [-66, -55], [-71, -55], [-75, -50], [-74, -44], [-72, -36],
+      [-71, -30], [-70, -20], [-75, -15], [-78, -10], [-81, -5], [-80, 1], [-78, 5]
+    ],
+    // Islas Británicas e Irlanda
+    [[-6, 50], [-5, 54], [-6, 58], [-2, 58], [1, 53], [1, 51], [-3, 50]],
+    [[-10, 52], [-10, 55], [-6, 55], [-6, 52]],
+    // Europa Occidental, Escandinavia y Mediterráneo
+    [
+      [-9, 37], [-9, 43], [-2, 43], [-5, 48], [2, 51], [8, 54], [10, 58],
+      [5, 60], [6, 63], [14, 68], [20, 70], [28, 71], [31, 69], [28, 65],
+      [22, 64], [18, 59], [14, 55], [19, 55], [24, 59], [30, 60], [38, 56],
+      [40, 47], [36, 45], [28, 42], [26, 40], [23, 37], [20, 39], [18, 43],
+      [13, 45], [16, 41], [15, 38], [12, 41], [9, 44], [5, 43], [3, 42],
+      [0, 38], [-5, 36]
+    ],
+    // África completa y Madagascar
+    [
+      [-6, 36], [3, 37], [10, 37], [11, 33], [20, 32], [25, 32], [32, 31],
+      [34, 28], [38, 22], [41, 15], [44, 12], [51, 12], [49, 8], [45, 2],
+      [40, -5], [40, -11], [36, -18], [35, -24], [31, -30], [25, -34],
+      [18, -35], [16, -29], [14, -22], [12, -15], [12, -6], [9, -1],
+      [9, 4], [4, 6], [-2, 5], [-8, 5], [-13, 8], [-17, 15], [-17, 21],
+      [-13, 28], [-9, 33]
+    ],
+    [[44, -25], [43, -18], [49, -12], [50, -16], [47, -25]],
+    // Asia, Medio Oriente, India, Sudeste Asiático y Siberia
+    [
+      [27, 40], [35, 42], [42, 42], [40, 47], [38, 56], [31, 69], [45, 68],
+      [60, 70], [75, 73], [95, 76], [115, 74], [140, 73], [165, 69], [178, 66],
+      [170, 60], [162, 55], [156, 51], [160, 58], [142, 54], [136, 46],
+      [130, 42], [128, 35], [125, 38], [121, 39], [122, 32], [120, 24],
+      [114, 22], [108, 21], [109, 13], [105, 9], [101, 13], [103, 2],
+      [99, 7], [97, 16], [91, 22], [85, 19], [80, 13], [77, 8], [73, 15],
+      [70, 22], [66, 25], [57, 26], [51, 24], [55, 28], [48, 30], [50, 26],
+      [58, 21], [52, 16], [44, 13], [40, 20], [35, 28], [35, 33], [36, 37], [27, 39]
+    ],
+    // Japón, Filipinas e Indonesia
+    [[130, 31], [134, 34], [139, 36], [141, 41], [144, 44], [141, 45], [139, 40], [135, 35]],
+    [[120, 18], [122, 18], [125, 10], [125, 6], [121, 13]],
+    [[96, 5], [104, -1], [106, -6], [102, -4], [96, 3]],
+    [[109, 1], [115, 4], [118, 1], [115, -4], [110, -3]],
+    [[132, -2], [141, -3], [148, -8], [145, -9], [135, -5]],
+    // Australia y Nueva Zelanda
+    [
+      [114, -22], [122, -17], [130, -12], [136, -12], [138, -16], [142, -11],
+      [146, -17], [153, -25], [151, -34], [147, -38], [140, -38], [135, -34],
+      [129, -32], [122, -34], [115, -34], [113, -26]
+    ],
+    [[167, -46], [172, -41], [178, -37], [176, -41], [170, -46]]
+  ];
+
+  // Nodos globales de retransmisión satelital (estaciones terrestres secundarias)
+  const GLOBAL_RELAY_STATIONS = [
+    { name: 'TOKYO-SAT', lat: 35.6762, lng: 139.6503 },
+    { name: 'SYDNEY-LINK', lat: -33.8688, lng: 151.2093 },
+    { name: 'FRANKFURT-HUB', lat: 50.1109, lng: 8.6821 },
+    { name: 'SINGAPORE-NODE', lat: 1.3521, lng: 103.8198 },
+    { name: 'CAPE-RELAY', lat: -33.9249, lng: 18.4241 }
   ];
 
   function buildTacticalNodes(usersList, ejemploAnon) {
@@ -195,7 +293,7 @@
         estatus: u.estatus,
         plataforma: u.plataforma_principal
       });
-      if (nodes.length >= 24) break;
+      if (nodes.length >= 28) break;
     }
 
     tacticalNodes = nodes;
@@ -208,7 +306,7 @@
     if (!listEl) return;
 
     listEl.innerHTML = tacticalNodes
-      .slice(0, 10)
+      .slice(0, 12)
       .map((n, idx) => {
         const isAnon = n.consentimiento === 'no';
         const tagClass = isAnon ? 'blocked' : 'ok';
@@ -234,8 +332,8 @@
     tacticalSelectedIdx = (idx + tacticalNodes.length) % tacticalNodes.length;
     const target = tacticalNodes[tacticalSelectedIdx];
     const canvas = document.getElementById('tacticalGeoCanvas');
-    const w = canvas ? canvas.width : 860;
-    const h = canvas ? canvas.height : 440;
+    const w = canvas ? canvas.width : 960;
+    const h = canvas ? canvas.height : 500;
 
     const isAnon = target.consentimiento === 'no';
     const isShieldedNow = isAnon && tacticalPostEtlShieldMode;
@@ -252,8 +350,7 @@
     const alertBanner = document.getElementById('hudAlertBanner');
 
     if (isShieldedNow) {
-      // Escudo de privacidad post-ETL activado: coordenadas anuladas
-      reticleTarget = { x: w * 0.5, y: h * 0.5 };
+      reticleTarget = latLngToCanvas(0, -35, w, h);
       lockEl.textContent = 'GEO-LOCK DENIED // NULL';
       lockEl.className = 'hud-status-text shielded';
       coordsEl.textContent = 'LAT: NULL // LON: NULL';
@@ -262,7 +359,6 @@
       alertBanner.className = 'hud-alert-banner shield-active';
       alertBanner.textContent = `ESCUDO DE PRIVACIDAD ACTIVO PARA ${target.id_usuario} · COORDENADAS ANULADAS EN BASE DE DATOS`;
     } else if (isAnon && !tacticalPostEtlShieldMode) {
-      // Modo Pre-ETL (Datos crudos antes de anonimizar)
       const pt = latLngToCanvas(target.rawLat, target.rawLng, w, h);
       reticleTarget = pt;
       lockEl.textContent = 'RAW GEODATA EXPOSED';
@@ -273,7 +369,6 @@
       alertBanner.className = 'hud-alert-banner raw-warning';
       alertBanner.textContent = `VISTA PRE-ETL (CSV CRUDO): UBICACIÓN ${target.rawCiudad.toUpperCase()} DETECTADA ANTES DE ANONIMIZACIÓN`;
     } else {
-      // Usuario con consentimiento = 'si'
       const pt = latLngToCanvas(target.rawLat, target.rawLng, w, h);
       reticleTarget = pt;
       lockEl.textContent = 'ORBITAL LOCK ENGAGED';
@@ -285,7 +380,6 @@
       alertBanner.textContent = `ADQUISICIÓN SATELITAL CONFIRMADA · ${target.rawCiudad.toUpperCase()} (${target.plataforma.toUpperCase()})`;
     }
 
-    // Actualizar barras de onda y log vectorial
     document.querySelectorAll('#hudTelemetryBars .wave-bar').forEach((bar) => {
       const randH = isShieldedNow ? Math.floor(12 + Math.random() * 18) : Math.floor(30 + Math.random() * 68);
       bar.style.height = `${randH}%`;
@@ -313,27 +407,56 @@
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
+      orbitPhase += 0.008;
 
-      // 1. Cuadrícula táctica de latitud / longitud
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.09)';
-      ctx.lineWidth = 1;
-      for (let x = 40; x < w; x += 60) {
+      // 1. Retícula esférica global, meridianos, paralelos y reglas de grados
+      const minLng = tacticalGlobalView ? -180 : -120;
+      const maxLng = tacticalGlobalView ? 180 : 15;
+      const lngStep = tacticalGlobalView ? 30 : 15;
+
+      ctx.font = '9px Consolas, monospace';
+      for (let lng = minLng; lng <= maxLng; lng += lngStep) {
+        const ptTop = latLngToCanvas(tacticalGlobalView ? 75 : 52, lng, w, h);
+        const ptBot = latLngToCanvas(tacticalGlobalView ? -60 : -44, lng, w, h);
+        const isPrime = lng === 0;
+        ctx.strokeStyle = isPrime ? 'rgba(6, 182, 212, 0.24)' : 'rgba(6, 182, 212, 0.08)';
+        ctx.lineWidth = isPrime ? 1.2 : 1;
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
+        ctx.moveTo(ptTop.x, 26);
+        ctx.lineTo(ptBot.x, h - 26);
         ctx.stroke();
-      }
-      for (let y = 35; y < h; y += 55) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(103, 232, 249, 0.55)';
+        const lbl = lng === 0 ? '0°' : lng > 0 ? `${lng}°E` : `${Math.abs(lng)}°W`;
+        ctx.fillText(lbl, ptTop.x - 12, 22);
       }
 
-      // 2. Polígonos vectoriales continentales
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.32)';
-      ctx.fillStyle = 'rgba(6, 182, 212, 0.05)';
-      ctx.lineWidth = 1.4;
+      const latLines = tacticalGlobalView ? [-45, -23.5, 0, 23.5, 45, 65] : [-30, -23.5, 0, 23.5, 40];
+      for (const lat of latLines) {
+        const ptL = latLngToCanvas(lat, minLng, w, h);
+        const ptR = latLngToCanvas(lat, maxLng, w, h);
+        const isEq = lat === 0;
+        const isTropic = Math.abs(lat) === 23.5;
+
+        ctx.strokeStyle = isEq
+          ? 'rgba(6, 182, 212, 0.28)'
+          : isTropic
+          ? 'rgba(59, 130, 246, 0.18)'
+          : 'rgba(6, 182, 212, 0.08)';
+        ctx.setLineDash(isTropic ? [4, 4] : []);
+        ctx.beginPath();
+        ctx.moveTo(36, ptL.y);
+        ctx.lineTo(w - 36, ptR.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = isEq ? 'rgba(103, 232, 249, 0.75)' : 'rgba(103, 232, 249, 0.45)';
+        const latLbl = isEq ? 'EQ 0°' : lat > 0 ? `${lat}°N` : `${Math.abs(lat)}°S`;
+        ctx.fillText(latLbl, 6, ptL.y + 3);
+      }
+
+      // 2. Continentes del Mundo con relleno Dot-Matrix y doble borde de neón
+      const dotPattern = getDotMatrixPattern(ctx);
       for (const poly of TACTICAL_LAND_POLYGONS) {
         ctx.beginPath();
         poly.forEach(([lng, lat], i) => {
@@ -342,62 +465,169 @@
           else ctx.lineTo(pt.x, pt.y);
         });
         ctx.closePath();
+
+        ctx.fillStyle = dotPattern;
         ctx.fill();
+
+        // Resplandor exterior de costa
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.22)';
+        ctx.lineWidth = 3.2;
+        ctx.stroke();
+
+        // Contorno táctico interior nítido
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.72)';
+        ctx.lineWidth = 1.15;
         ctx.stroke();
       }
 
-      // 3. Anillo de radar orbital central y haz de barrido
+      // 3. Trayectorias sinusoidales de satélites orbitales (Constelación ZEUS)
+      const satellites = [
+        { id: 'ZEUS-01', amp: 48, freq: 1, phase: orbitPhase, color: 'rgba(6, 182, 212, 0.35)' },
+        { id: 'ZEUS-02', amp: 38, freq: 1, phase: orbitPhase + 2.2, color: 'rgba(59, 130, 246, 0.25)' }
+      ];
+
+      let primarySatPos = { x: w * 0.5, y: 40 };
+
+      satellites.forEach((sat, sIdx) => {
+        ctx.strokeStyle = sat.color;
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        for (let lng = -180; lng <= 180; lng += 4) {
+          const rad = ((lng + 180) * Math.PI) / 180;
+          const lat = sat.amp * Math.sin(rad * sat.freq + sat.phase);
+          const pt = latLngToCanvas(lat, lng, w, h);
+          if (lng === -180) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Posición actual del satélite a lo largo de la curva
+        const satLng = ((((sat.phase * 45) % 360) + 360) % 360) - 180;
+        const satRad = ((satLng + 180) * Math.PI) / 180;
+        const satLat = sat.amp * Math.sin(satRad * sat.freq + sat.phase);
+        const satPt = latLngToCanvas(satLat, satLng, w, h);
+
+        if (sIdx === 0) primarySatPos = satPt;
+
+        // Cono de cobertura orbital del satélite
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.22)';
+        ctx.fillStyle = 'rgba(6, 182, 212, 0.04)';
+        ctx.beginPath();
+        ctx.arc(satPt.x, satPt.y, 44, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Icono del satélite en órbita
+        ctx.fillStyle = '#67e8f9';
+        ctx.fillRect(satPt.x - 3, satPt.y - 3, 6, 6);
+        ctx.strokeStyle = '#67e8f9';
+        ctx.beginPath();
+        ctx.moveTo(satPt.x - 10, satPt.y);
+        ctx.lineTo(satPt.x + 10, satPt.y);
+        ctx.stroke();
+
+        ctx.fillStyle = '#67e8f9';
+        ctx.font = 'bold 9px Consolas, monospace';
+        ctx.fillText(sat.id, satPt.x + 8, satPt.y - 6);
+      });
+
+      // 4. Estaciones globales de retransmisión (cuando está en vista global)
+      if (tacticalGlobalView) {
+        GLOBAL_RELAY_STATIONS.forEach((st) => {
+          const pt = latLngToCanvas(st.lat, st.lng, w, h);
+          ctx.strokeStyle = 'rgba(59, 130, 246, 0.45)';
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = '#60a5fa';
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(147, 197, 253, 0.72)';
+          ctx.font = '8px Consolas, monospace';
+          ctx.fillText(st.name, pt.x + 7, pt.y + 3);
+        });
+      }
+
+      // 5. Anillos de radar orbital central y barrido de escaneo
       const cx = w * 0.5;
       const cy = h * 0.5;
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.14)';
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
       ctx.lineWidth = 1;
-      [90, 165, 240].forEach((r) => {
+      [105, 195].forEach((r) => {
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
       });
 
       radarAngle = (radarAngle + 0.012) % (Math.PI * 2);
-      const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 240);
-      grad.addColorStop(0, 'rgba(6, 182, 212, 0.18)');
+      const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, 210);
+      grad.addColorStop(0, 'rgba(6, 182, 212, 0.14)');
       grad.addColorStop(1, 'rgba(6, 182, 212, 0)');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, 240, radarAngle, radarAngle + 0.48);
+      ctx.arc(cx, cy, 210, radarAngle, radarAngle + 0.42);
       ctx.closePath();
       ctx.fill();
 
-      // 4. Arcos de enlace satelital y nodos de usuarios reales
+      // 6. Arcos geodésicos entre nodos de la comunidad y enlaces satelitales
       const currentTarget = tacticalNodes[tacticalSelectedIdx];
+      const visiblePoints = [];
+
       tacticalNodes.forEach((node, idx) => {
         const isNodeAnon = node.consentimiento === 'no';
-        if (isNodeAnon && tacticalPostEtlShieldMode) return; // Oculto del mapa en modo Post-ETL
+        if (isNodeAnon && tacticalPostEtlShieldMode) return;
 
         const pt = latLngToCanvas(node.rawLat, node.rawLng, w, h);
+        visiblePoints.push(pt);
 
-        // Línea de trayectoria orbital hacia el nodo activo
+        // Haz láser desde el satélite ZEUS-01 hacia el objetivo seleccionado
         if (idx === tacticalSelectedIdx) {
-          ctx.strokeStyle = isNodeAnon ? 'rgba(245, 158, 11, 0.45)' : 'rgba(6, 182, 212, 0.45)';
-          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = isNodeAnon ? 'rgba(245, 158, 11, 0.55)' : 'rgba(34, 211, 238, 0.6)';
+          ctx.lineWidth = 1.3;
+          ctx.setLineDash([4, 3]);
           ctx.beginPath();
-          ctx.moveTo(cx, 18);
-          ctx.quadraticCurveTo((cx + pt.x) / 2, Math.min(cy, pt.y) - 40, pt.x, pt.y);
+          ctx.moveTo(primarySatPos.x, primarySatPos.y);
+          ctx.lineTo(pt.x, pt.y);
           ctx.stroke();
           ctx.setLineDash([]);
         }
 
-        // Punto luminoso del nodo
+        // Halo pulsante en cada ciudad activa
+        ctx.strokeStyle = isNodeAnon ? 'rgba(245, 158, 11, 0.45)' : 'rgba(16, 185, 129, 0.45)';
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, idx === tacticalSelectedIdx ? 9 : 6, 0, Math.PI * 2);
+        ctx.stroke();
+
         ctx.fillStyle = isNodeAnon ? '#f59e0b' : '#10b981';
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, idx === tacticalSelectedIdx ? 5 : 3.2, 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, idx === tacticalSelectedIdx ? 4.2 : 2.8, 0, Math.PI * 2);
         ctx.fill();
       });
 
-      // 5. Interpolación suave de la retícula balística estilo G.I. Joe (Project Zeus)
+      // Red de arcos geodésicos sutiles conectando hubs activos
+      if (visiblePoints.length > 2) {
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.14)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < Math.min(8, visiblePoints.length - 1); i++) {
+          const p1 = visiblePoints[i];
+          const p2 = visiblePoints[i + 1];
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.quadraticCurveTo((p1.x + p2.x) / 2, Math.min(p1.y, p2.y) - 24, p2.x, p2.y);
+          ctx.stroke();
+        }
+      }
+
+      // 7. Retícula Balística de Puntería estilo G.I. Joe (Project Zeus)
       reticleCurrent.x += (reticleTarget.x - reticleCurrent.x) * 0.12;
       reticleCurrent.y += (reticleTarget.y - reticleCurrent.y) * 0.12;
-      ringRotation += 0.025;
+      ringRotation += 0.024;
 
       const rx = reticleCurrent.x;
       const ry = reticleCurrent.y;
@@ -410,21 +640,21 @@
         ? '#f59e0b'
         : '#06b6d4';
 
-      // Líneas guía de puntería de extremo a extremo
+      // Líneas guía de puntería en cruz de extremo a extremo
       ctx.strokeStyle = isShieldedNow ? 'rgba(244, 63, 94, 0.28)' : 'rgba(6, 182, 212, 0.28)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(0, ry);
-      ctx.lineTo(rx - 44, ry);
-      ctx.moveTo(rx + 44, ry);
-      ctx.lineTo(w, ry);
-      ctx.moveTo(rx, 0);
-      ctx.lineTo(rx, ry - 44);
-      ctx.moveTo(rx, ry + 44);
-      ctx.lineTo(rx, h);
+      ctx.moveTo(36, ry);
+      ctx.lineTo(rx - 46, ry);
+      ctx.moveTo(rx + 46, ry);
+      ctx.lineTo(w - 36, ry);
+      ctx.moveTo(rx, 26);
+      ctx.lineTo(rx, ry - 46);
+      ctx.moveTo(rx, ry + 46);
+      ctx.lineTo(rx, h - 26);
       ctx.stroke();
 
-      // Anillo exterior giratorio segmentado (estilo mira satelital G.I. Joe)
+      // Anillo exterior giratorio segmentado con marcas de calibración
       ctx.save();
       ctx.translate(rx, ry);
       ctx.rotate(ringRotation);
@@ -432,7 +662,7 @@
       ctx.lineWidth = 2;
       for (let i = 0; i < 4; i++) {
         ctx.beginPath();
-        ctx.arc(0, 0, 36, i * (Math.PI / 2) + 0.18, (i + 1) * (Math.PI / 2) - 0.18);
+        ctx.arc(0, 0, 38, i * (Math.PI / 2) + 0.18, (i + 1) * (Math.PI / 2) - 0.18);
         ctx.stroke();
       }
       ctx.restore();
@@ -446,28 +676,27 @@
       ctx.strokeRect(-16, -16, 32, 32);
       ctx.restore();
 
-      // Centro de impacto / escudo
       ctx.fillStyle = mainColor;
       ctx.beginPath();
-      ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+      ctx.arc(rx, ry, 3.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Etiqueta flotante junto a la retícula
+      // Caja de telemetría acoplada a la retícula
       if (currentTarget) {
-        const boxX = Math.min(w - 215, rx + 44);
-        const boxY = Math.max(24, ry - 38);
-        ctx.fillStyle = 'rgba(7, 10, 16, 0.88)';
+        const boxX = rx + 250 > w ? rx - 248 : rx + 46;
+        const boxY = Math.max(34, Math.min(h - 90, ry - 36));
+        ctx.fillStyle = 'rgba(7, 10, 16, 0.92)';
         ctx.strokeStyle = mainColor;
-        ctx.lineWidth = 1.2;
-        ctx.fillRect(boxX, boxY, 198, 46);
-        ctx.strokeRect(boxX, boxY, 198, 46);
+        ctx.lineWidth = 1.3;
+        ctx.fillRect(boxX, boxY, 204, 48);
+        ctx.strokeRect(boxX, boxY, 204, 48);
 
         ctx.fillStyle = '#f3f4f6';
         ctx.font = 'bold 11px Consolas, monospace';
         ctx.fillText(
           `${currentTarget.id_usuario} // ${currentTarget.alias}`,
           boxX + 8,
-          boxY + 17
+          boxY + 18
         );
         ctx.fillStyle = mainColor;
         ctx.font = '10px Consolas, monospace';
@@ -476,9 +705,66 @@
             ? 'SHIELD: COORDS NULLIFIED'
             : `${currentTarget.rawCiudad} (${currentTarget.rawLat.toFixed(2)}, ${currentTarget.rawLng.toFixed(2)})`,
           boxX + 8,
-          boxY + 34
+          boxY + 35
         );
       }
+
+      // 8. Ventana Picture-in-Picture (PiP) SAT-CAM 16X ZOOM en esquina inferior izquierda
+      const pipX = 44;
+      const pipY = h - 144;
+      const pipW = 190;
+      const pipH = 104;
+
+      ctx.fillStyle = 'rgba(6, 10, 17, 0.92)';
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(pipX, pipY, pipW, pipH);
+      ctx.strokeRect(pipX, pipY, pipW, pipH);
+
+      // Cuadrícula interna de la cámara de aumento
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.12)';
+      ctx.lineWidth = 1;
+      for (let gx = pipX + 24; gx < pipX + pipW; gx += 24) {
+        ctx.beginPath();
+        ctx.moveTo(gx, pipY + 18);
+        ctx.lineTo(gx, pipY + pipH);
+        ctx.stroke();
+      }
+      for (let gy = pipY + 26; gy < pipY + pipH; gy += 22) {
+        ctx.beginPath();
+        ctx.moveTo(pipX, gy);
+        ctx.lineTo(pipX + pipW, gy);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = mainColor;
+      ctx.font = 'bold 9px Consolas, monospace';
+      ctx.fillText(
+        isShieldedNow ? 'SAT-CAM 16X // SIGNAL JAMMED' : 'SAT-CAM 16X // SECTOR LOCK',
+        pipX + 7,
+        pipY + 13
+      );
+
+      const pipCx = pipX + pipW * 0.5;
+      const pipCy = pipY + 56;
+      ctx.strokeStyle = mainColor;
+      ctx.beginPath();
+      ctx.arc(pipCx, pipCy, 22, 0, Math.PI * 2);
+      ctx.moveTo(pipCx - 30, pipCy);
+      ctx.lineTo(pipCx + 30, pipCy);
+      ctx.moveTo(pipCx, pipCy - 26);
+      ctx.lineTo(pipCx, pipCy + 26);
+      ctx.stroke();
+
+      ctx.fillStyle = '#d1d5db';
+      ctx.font = '9px Consolas, monospace';
+      ctx.fillText(
+        isShieldedNow
+          ? 'ENCRYPTED // LAT/LON: NULL'
+          : `ALT: 408.5KM · ${currentTarget ? currentTarget.rawCiudad.toUpperCase() : 'ACTIVE'}`,
+        pipX + 8,
+        pipY + pipH - 7
+      );
 
       const azEl = document.getElementById('hudAzimuthVal');
       if (azEl) {
@@ -588,6 +874,14 @@
           resizeAllCharts();
         });
       });
+    });
+
+    document.getElementById('btnTacticalZoomToggle')?.addEventListener('click', (e) => {
+      tacticalGlobalView = !tacticalGlobalView;
+      e.currentTarget.textContent = tacticalGlobalView
+        ? '🌐 MAPA GLOBAL 360°'
+        : '🎯 ZOOM TEATRO AMÉRICA-EUROPA';
+      selectTacticalTarget(tacticalSelectedIdx);
     });
 
     document.getElementById('btnTacticalModeBefore')?.addEventListener('click', (e) => {
