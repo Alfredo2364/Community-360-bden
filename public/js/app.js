@@ -142,7 +142,7 @@
   let camTargetZoom = 1.0;
 
   function toDMS(deg, posHem, negHem) {
-    if (deg === null || deg === undefined || Number.isNaN(Number(deg))) return 'NULL';
+    if (deg === null || deg === undefined || Number.isNaN(Number(deg))) return 'Sin registro';
     const num = Number(deg);
     const hem = num >= 0 ? posHem : negHem;
     const abs = Math.abs(num);
@@ -402,13 +402,13 @@
       id_usuario: target.id_usuario,
       alias: target.alias,
       consentimiento_datos: target.consentimiento,
-      pais: target.consentimiento === 'no' ? null : target.rawPais,
-      estado: target.consentimiento === 'no' ? null : target.rawEstado,
-      ciudad: target.consentimiento === 'no' ? null : target.rawCiudad,
-      latitud: target.consentimiento === 'no' ? null : target.rawLat,
-      longitud: target.consentimiento === 'no' ? null : target.rawLng,
-      zona_horaria: target.consentimiento === 'no' ? null : target.rawTz,
-      desplegado_en_mapa: target.consentimiento !== 'no'
+      pais: target.consentimiento === 'no' ? 'Sin registro' : target.rawPais,
+      estado: target.consentimiento === 'no' ? 'Sin registro' : target.rawEstado,
+      ciudad: target.consentimiento === 'no' ? 'Sin registro' : target.rawCiudad,
+      latitud: target.consentimiento === 'no' ? 'No encontrado' : target.rawLat,
+      longitud: target.consentimiento === 'no' ? 'No encontrado' : target.rawLng,
+      zona_horaria: target.consentimiento === 'no' ? 'Sin registro' : target.rawTz,
+      estado_mapa: target.consentimiento === 'no' ? 'Sin desplegar (Ubicación no encontrada)' : 'Desplegado en mapa'
     };
 
     privacyBox.innerHTML = `
@@ -450,8 +450,8 @@
           <td><strong>${u.alias}</strong></td>
           <td>${u.plataforma}</td>
           <td><span class="badge-status inactivo">NO</span></td>
-          <td><code>NULL</code> <span style="color: var(--text-muted); font-size: 0.75rem;">(Suprimido)</span></td>
-          <td><code>LAT: NULL / LON: NULL</code></td>
+          <td><code>Sin registro</code></td>
+          <td><code>No encontrado / Sin registro</code></td>
           <td><span class="tag-pill privacy-alert">SIN DESPLEGAR EN MAPA</span></td>
           <td><button class="btn-table-action" data-focusanon="${u.id_usuario}">Auditar en Radar ↑</button></td>
         </tr>
@@ -494,13 +494,13 @@
 
     if (isShieldedNow) {
       resetCameraToGlobal();
-      lockEl.textContent = 'SIN DESPLEGAR // ANÓNIMO';
+      lockEl.textContent = 'UBICACIÓN NO ENCONTRADA';
       lockEl.className = 'hud-status-text shielded';
-      coordsEl.textContent = 'LAT: NULL // LON: NULL';
-      sectorEl.textContent = 'NO DESPLEGADO EN MAPA (NULL)';
-      tzEl.textContent = 'NULL (PROTEGIDO)';
+      coordsEl.textContent = 'SIN REGISTRO DE COORDENADAS';
+      sectorEl.textContent = 'NO ENCONTRADO / SIN REGISTRO';
+      tzEl.textContent = 'SIN REGISTRO (PROTEGIDO)';
       alertBanner.className = 'hud-alert-banner shield-active';
-      alertBanner.textContent = `PERFIL ANÓNIMO ${target.id_usuario} (${target.alias.toUpperCase()}) · SIN DESPLEGAR EN EL MAPA POR COORDENADAS EN NULL`;
+      alertBanner.textContent = `PERFIL ANÓNIMO ${target.id_usuario} (${target.alias.toUpperCase()}) · UBICACIÓN NO ENCONTRADA / SIN REGISTRO EN EL SISTEMA`;
     } else {
       if (autoZoom) {
         camTargetLat = target.rawLat;
@@ -539,13 +539,13 @@
 
     const vectorLog = document.getElementById('hudVectorLog');
     if (vectorLog) {
-      const dmsLat = isShieldedNow ? 'NULL' : toDMS(target.rawLat, 'N', 'S');
-      const dmsLng = isShieldedNow ? 'NULL' : toDMS(target.rawLng, 'E', 'W');
+      const dmsLat = isShieldedNow ? 'SIN REGISTRO' : toDMS(target.rawLat, 'N', 'S');
+      const dmsLng = isShieldedNow ? 'SIN REGISTRO' : toDMS(target.rawLng, 'E', 'W');
       vectorLog.innerHTML = `
         <div>OBJETIVO: ${target.id_usuario} (${target.alias})</div>
         <div>LAT (DMS): ${dmsLat}</div>
         <div>LON (DMS): ${dmsLng}</div>
-        <div>DEC: ${isShieldedNow ? 'NULL, NULL' : `${target.rawLat.toFixed(4)}°, ${target.rawLng.toFixed(4)}°`}</div>
+        <div>DEC: ${isShieldedNow ? 'NO ENCONTRADO' : `${target.rawLat.toFixed(4)}°, ${target.rawLng.toFixed(4)}°`}</div>
         <div>ZOOM: ${camTargetZoom.toFixed(1)}X · ${target.plataforma.toUpperCase()}</div>
       `;
     }
@@ -760,14 +760,14 @@
         ctx.fillStyle = '#fda4af';
         ctx.font = 'bold 11px Consolas, monospace';
         ctx.fillText(
-          `OBJETIVO ${currentTarget.id_usuario} (${currentTarget.alias.toUpperCase()}) · SIN DESPLEGAR`,
+          `OBJETIVO ${currentTarget.id_usuario} (${currentTarget.alias.toUpperCase()}) · NO ENCONTRADO`,
           bx + 14,
           by + 24
         );
         ctx.fillStyle = '#f3f4f6';
         ctx.font = '10px Consolas, monospace';
         ctx.fillText(
-          'COORDENADAS SUPRIMIDAS: LAT NULL / LON NULL (00° 00\' 00.0")',
+          'UBICACIÓN: SIN REGISTRO GEOLOCALIZADO EN EL SISTEMA',
           bx + 14,
           by + 45
         );
