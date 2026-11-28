@@ -78,7 +78,7 @@
     localStorage.removeItem(TOKEN_KEY);
   }
 
-  async function apiFetch(endpoint, options = {}) {
+  async function apiFetch(endpoint, options = {}, retries = 3) {
     const token = getToken();
     const headers = {
       'Content-Type': 'application/json',
@@ -89,21 +89,33 @@
     }
 
     const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
 
-    if (response.status === 401 && endpoint !== '/api/auth/login') {
-      handleForceLogout();
-      throw new Error('Sesión expirada o no autorizada.');
-    }
+      if (response.status === 401 && endpoint !== '/api/auth/login') {
+        handleForceLogout();
+        throw new Error('Sesión expirada o no autorizada.');
+      }
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || `Error HTTP ${response.status}`);
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status >= 500 && retries > 0) {
+          await new Promise((r) => setTimeout(r, 2000));
+          return apiFetch(endpoint, options, retries - 1);
+        }
+        throw new Error(data.error || `Error HTTP ${response.status}`);
+      }
+      return data;
+    } catch (err) {
+      if (retries > 0 && !String(err.message).includes('Sesión expirada') && endpoint !== '/api/auth/login') {
+        await new Promise((r) => setTimeout(r, 2000));
+        return apiFetch(endpoint, options, retries - 1);
+      }
+      throw err;
     }
-    return data;
   }
 
   function resizeAllCharts() {
@@ -1733,11 +1745,10 @@
     ensureChartsInitialized();
     connectWebSocket();
 
-    const [realtimeSnap] = await Promise.all([
-      apiFetch('/api/analytics/realtime'),
+    await Promise.allSettled([
+      apiFetch('/api/analytics/realtime').then((snap) => updateRealtimeUI(snap)),
       loadHistoricalAnalytics()
     ]);
-    updateRealtimeUI(realtimeSnap);
   }
 
   loginForm.addEventListener('submit', async (e) => {
