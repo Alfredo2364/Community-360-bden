@@ -255,6 +255,9 @@
     { name: 'CAPE-RELAY', lat: -33.9249, lng: 18.4241 }
   ];
 
+  let tacticalTargetFilter = 'all'; // 'all' | 'deployed' | 'undeployed'
+  let cachedAnonimosUsers = [];
+
   function buildTacticalNodes(usersList, ejemploAnon) {
     const nodes = [];
 
@@ -265,7 +268,9 @@
         id_usuario: a.id_usuario,
         alias: a.alias,
         consentimiento: 'no',
+        hasPreEtlSample: true,
         rawCiudad: a.ciudad || 'Monterrey',
+        rawEstado: a.estado || 'Nuevo León',
         rawPais: a.pais || 'México',
         rawTz: a.zona_horaria || 'America/Monterrey',
         rawLat: a.latitud ? Number(a.latitud) : fallback.lat,
@@ -278,26 +283,29 @@
     for (const u of usersList) {
       if (nodes.some((n) => n.id_usuario === u.id_usuario)) continue;
       const noConsent = String(u.consentimiento_datos).toLowerCase() === 'no';
-      const fallback = CITY_COORDS_FALLBACK[u.ciudad] || CITY_COORDS_FALLBACK['Monterrey'];
+      const fallback = CITY_COORDS_FALLBACK[u.ciudad] || CITY_COORDS_FALLBACK['Mérida'];
       const hasCoords = u.latitud !== null && u.longitud !== null && u.latitud !== undefined;
 
       nodes.push({
         id_usuario: u.id_usuario,
         alias: u.alias,
         consentimiento: noConsent ? 'no' : 'si',
-        rawCiudad: u.ciudad || (noConsent ? 'SECTOR CLASIFICADO' : 'Mérida'),
-        rawPais: u.pais || (noConsent ? 'OCULTO' : 'México'),
-        rawTz: u.zona_horaria || 'America/Mexico_City',
-        rawLat: hasCoords ? Number(u.latitud) : fallback.lat,
-        rawLng: hasCoords ? Number(u.longitud) : fallback.lng,
+        hasPreEtlSample: false,
+        rawCiudad: noConsent ? null : (u.ciudad || 'Mérida'),
+        rawEstado: noConsent ? null : (u.estado || ''),
+        rawPais: noConsent ? null : (u.pais || 'México'),
+        rawTz: noConsent ? null : (u.zona_horaria || 'America/Mexico_City'),
+        rawLat: noConsent ? null : (hasCoords ? Number(u.latitud) : fallback.lat),
+        rawLng: noConsent ? null : (hasCoords ? Number(u.longitud) : fallback.lng),
         estatus: u.estatus,
         plataforma: u.plataforma_principal
       });
-      if (nodes.length >= 28) break;
     }
 
     tacticalNodes = nodes;
+    cachedAnonimosUsers = nodes.filter((n) => n.consentimiento === 'no');
     renderTacticalTargetList();
+    renderAnonimosUnmappedTable();
     selectTacticalTarget(0);
   }
 
@@ -305,12 +313,20 @@
     const listEl = document.getElementById('hudTargetSelectorList');
     if (!listEl) return;
 
-    listEl.innerHTML = tacticalNodes
-      .slice(0, 12)
-      .map((n, idx) => {
+    const filteredWithIndex = tacticalNodes
+      .map((n, idx) => ({ n, idx }))
+      .filter(({ n }) => {
+        if (tacticalTargetFilter === 'deployed') return n.consentimiento === 'si';
+        if (tacticalTargetFilter === 'undeployed') return n.consentimiento === 'no';
+        return true;
+      })
+      .slice(0, 30);
+
+    listEl.innerHTML = filteredWithIndex
+      .map(({ n, idx }) => {
         const isAnon = n.consentimiento === 'no';
         const tagClass = isAnon ? 'blocked' : 'ok';
-        const tagText = isAnon ? 'SHIELD' : 'LOCK';
+        const tagText = isAnon ? 'SIN DESPLEGAR' : 'EN MAPA';
         return `
           <button class="tactical-target-btn ${idx === tacticalSelectedIdx ? 'active' : ''}" data-tidx="${idx}">
             <span>${n.id_usuario} · ${n.alias}</span>
@@ -327,6 +343,97 @@
     });
   }
 
+  function renderPrivacyComparisonForTarget(target) {
+    const privacyBox = document.getElementById('privacyExampleBox');
+    if (!privacyBox || !target) return;
+
+    const antesObj = target.hasPreEtlSample && ejemploAnonimizacionCache?.antes
+      ? ejemploAnonimizacionCache.antes
+      : {
+          id_usuario: target.id_usuario,
+          alias: target.alias,
+          consentimiento_datos: target.consentimiento,
+          pais: target.consentimiento === 'no' ? '(Suprimido en ETL antes de carga SQL)' : target.rawPais,
+          estado: target.consentimiento === 'no' ? '(Suprimido en ETL antes de carga SQL)' : target.rawEstado,
+          ciudad: target.consentimiento === 'no' ? '(Suprimido en ETL antes de carga SQL)' : target.rawCiudad,
+          latitud: target.consentimiento === 'no' ? '(Suprimido en ETL)' : target.rawLat,
+          longitud: target.consentimiento === 'no' ? '(Suprimido en ETL)' : target.rawLng,
+          zona_horaria: target.consentimiento === 'no' ? '(Suprimido en ETL)' : target.rawTz
+        };
+
+    const despuesObj = {
+      id_usuario: target.id_usuario,
+      alias: target.alias,
+      consentimiento_datos: target.consentimiento,
+      pais: target.consentimiento === 'no' ? null : target.rawPais,
+      estado: target.consentimiento === 'no' ? null : target.rawEstado,
+      ciudad: target.consentimiento === 'no' ? null : target.rawCiudad,
+      latitud: target.consentimiento === 'no' ? null : target.rawLat,
+      longitud: target.consentimiento === 'no' ? null : target.rawLng,
+      zona_horaria: target.consentimiento === 'no' ? null : target.rawTz,
+      desplegado_en_mapa: target.consentimiento !== 'no'
+    };
+
+    privacyBox.innerHTML = `
+      <div>
+        <strong>Auditoría de Ubicación del Objetivo Seleccionado (<code>${target.id_usuario} · ${target.alias}</code>)</strong>
+      </div>
+      <div class="privacy-compare">
+        <div>
+          <span>ANTES (Entrada al Pipeline ETL):</span>
+          <pre>${JSON.stringify(antesObj, null, 2)}</pre>
+        </div>
+        <div>
+          <span>DESPUÉS (Estado en Base de Datos y Geo-Radar):</span>
+          <pre>${JSON.stringify(despuesObj, null, 2)}</pre>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAnonimosUnmappedTable() {
+    const tbody = document.getElementById('tableAnonimosUnmappedBody');
+    if (!tbody) return;
+    const q = (document.getElementById('inputFilterAnonimos')?.value || '').trim().toLowerCase();
+
+    const filtered = cachedAnonimosUsers.filter((u) => {
+      if (!q) return true;
+      return (
+        String(u.id_usuario).toLowerCase().includes(q) ||
+        String(u.alias).toLowerCase().includes(q) ||
+        String(u.plataforma).toLowerCase().includes(q)
+      );
+    });
+
+    tbody.innerHTML = filtered
+      .map(
+        (u) => `
+        <tr class="clickable-row" data-anonid="${u.id_usuario}">
+          <td><code>${u.id_usuario}</code></td>
+          <td><strong>${u.alias}</strong></td>
+          <td>${u.plataforma}</td>
+          <td><span class="badge-status inactivo">NO</span></td>
+          <td><code>NULL</code> <span style="color: var(--text-muted); font-size: 0.75rem;">(Suprimido)</span></td>
+          <td><code>LAT: NULL / LON: NULL</code></td>
+          <td><span class="tag-pill privacy-alert">SIN DESPLEGAR EN MAPA</span></td>
+          <td><button class="btn-table-action" data-focusanon="${u.id_usuario}">Auditar en Radar ↑</button></td>
+        </tr>
+      `
+      )
+      .join('');
+
+    tbody.querySelectorAll('tr.clickable-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        const uid = row.getAttribute('data-anonid');
+        const idx = tacticalNodes.findIndex((n) => n.id_usuario === uid);
+        if (idx !== -1) {
+          selectTacticalTarget(idx);
+          document.querySelector('.tactical-hud-shell')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    });
+  }
+
   function selectTacticalTarget(idx) {
     if (!tacticalNodes.length) return;
     tacticalSelectedIdx = (idx + tacticalNodes.length) % tacticalNodes.length;
@@ -336,10 +443,11 @@
     const h = canvas ? canvas.height : 500;
 
     const isAnon = target.consentimiento === 'no';
-    const isShieldedNow = isAnon && tacticalPostEtlShieldMode;
+    const canShowRawPreEtl = isAnon && !tacticalPostEtlShieldMode && target.hasPreEtlSample;
+    const isShieldedNow = isAnon && !canShowRawPreEtl;
 
-    document.querySelectorAll('.tactical-target-btn').forEach((b, i) => {
-      b.classList.toggle('active', i === tacticalSelectedIdx);
+    document.querySelectorAll('.tactical-target-btn').forEach((b) => {
+      b.classList.toggle('active', Number(b.getAttribute('data-tidx')) === tacticalSelectedIdx);
     });
 
     document.getElementById('hudTargetAlias').textContent = `${target.id_usuario} // ${target.alias.toUpperCase()}`;
@@ -351,33 +459,37 @@
 
     if (isShieldedNow) {
       reticleTarget = latLngToCanvas(0, -35, w, h);
-      lockEl.textContent = 'GEO-LOCK DENIED // NULL';
+      lockEl.textContent = 'SIN DESPLEGAR // ANÓNIMO';
       lockEl.className = 'hud-status-text shielded';
       coordsEl.textContent = 'LAT: NULL // LON: NULL';
-      sectorEl.textContent = 'UBICACIÓN SUPRIMIDA (ETL)';
+      sectorEl.textContent = 'NO DESPLEGADO EN MAPA (NULL)';
       tzEl.textContent = 'NULL (PROTEGIDO)';
       alertBanner.className = 'hud-alert-banner shield-active';
-      alertBanner.textContent = `ESCUDO DE PRIVACIDAD ACTIVO PARA ${target.id_usuario} · COORDENADAS ANULADAS EN BASE DE DATOS`;
-    } else if (isAnon && !tacticalPostEtlShieldMode) {
+      alertBanner.textContent = `PERFIL ANÓNIMO ${target.id_usuario} (${target.alias.toUpperCase()}) · SIN DESPLEGAR EN EL MAPA POR COORDENADAS EN NULL`;
+    } else if (canShowRawPreEtl) {
       const pt = latLngToCanvas(target.rawLat, target.rawLng, w, h);
       reticleTarget = pt;
-      lockEl.textContent = 'RAW GEODATA EXPOSED';
+      lockEl.textContent = 'RAW GEODATA EXPOSED (PRE-ETL)';
       lockEl.className = 'hud-status-text exposed';
       coordsEl.textContent = `${target.rawLat.toFixed(4)}° N, ${target.rawLng.toFixed(4)}° W`;
       sectorEl.textContent = `${target.rawCiudad.toUpperCase()}, ${target.rawPais.toUpperCase()}`;
       tzEl.textContent = target.rawTz.toUpperCase();
       alertBanner.className = 'hud-alert-banner raw-warning';
-      alertBanner.textContent = `VISTA PRE-ETL (CSV CRUDO): UBICACIÓN ${target.rawCiudad.toUpperCase()} DETECTADA ANTES DE ANONIMIZACIÓN`;
+      alertBanner.textContent = `EVIDENCIA PRE-ETL (CSV CRUDO): ${target.id_usuario} TENÍA UBICACIÓN ${target.rawCiudad.toUpperCase()} ANTES DE ANONIMIZAR`;
     } else {
       const pt = latLngToCanvas(target.rawLat, target.rawLng, w, h);
       reticleTarget = pt;
-      lockEl.textContent = 'ORBITAL LOCK ENGAGED';
+      lockEl.textContent = 'DESPLEGADO EN MAPA // LOCK';
       lockEl.className = 'hud-status-text locked';
       coordsEl.textContent = `${target.rawLat.toFixed(4)}°, ${target.rawLng.toFixed(4)}°`;
       sectorEl.textContent = `${target.rawCiudad.toUpperCase()}, ${target.rawPais.toUpperCase()}`;
       tzEl.textContent = target.rawTz.toUpperCase();
       alertBanner.className = 'hud-alert-banner';
-      alertBanner.textContent = `ADQUISICIÓN SATELITAL CONFIRMADA · ${target.rawCiudad.toUpperCase()} (${target.plataforma.toUpperCase()})`;
+      alertBanner.textContent = `NODO DESPLEGADO Y RASTREADO EN MAPA · ${target.rawCiudad.toUpperCase()} (${target.plataforma.toUpperCase()})`;
+    }
+
+    if (isAnon) {
+      renderPrivacyComparisonForTarget(target);
     }
 
     document.querySelectorAll('#hudTelemetryBars .wave-bar').forEach((bar) => {
@@ -391,8 +503,8 @@
       vectorLog.innerHTML = `
         <div>[${nowStr}]TARGET: ${target.id_usuario}</div>
         <div>CONSENT: ${target.consentimiento.toUpperCase()}</div>
-        <div>MODE: ${tacticalPostEtlShieldMode ? 'POST-ETL SHIELD' : 'PRE-ETL RAW'}</div>
-        <div>VECTOR: ${isShieldedNow ? 'ENCRYPTED_NULL' : `${target.rawLat.toFixed(2)}, ${target.rawLng.toFixed(2)}`}</div>
+        <div>MAP_STATUS: ${isShieldedNow ? 'UNDEPLOYED (NULL)' : 'DEPLOYED_ON_MAP'}</div>
+        <div>VECTOR: ${isShieldedNow ? 'NULL_COORDINATES' : `${target.rawLat.toFixed(2)}, ${target.rawLng.toFixed(2)}`}</div>
         <div>CHANNEL: ${target.plataforma.toUpperCase()}</div>
       `;
     }
@@ -581,7 +693,9 @@
 
       tacticalNodes.forEach((node, idx) => {
         const isNodeAnon = node.consentimiento === 'no';
-        if (isNodeAnon && tacticalPostEtlShieldMode) return;
+        const canPlotRaw = isNodeAnon && !tacticalPostEtlShieldMode && node.hasPreEtlSample;
+        if (isNodeAnon && !canPlotRaw) return;
+        if (node.rawLat === null || node.rawLng === null) return;
 
         const pt = latLngToCanvas(node.rawLat, node.rawLng, w, h);
         visiblePoints.push(pt);
@@ -632,7 +746,8 @@
       const rx = reticleCurrent.x;
       const ry = reticleCurrent.y;
       const isTargetAnon = currentTarget && currentTarget.consentimiento === 'no';
-      const isShieldedNow = isTargetAnon && tacticalPostEtlShieldMode;
+      const canShowRawPreEtl = isTargetAnon && !tacticalPostEtlShieldMode && currentTarget.hasPreEtlSample;
+      const isShieldedNow = isTargetAnon && !canShowRawPreEtl;
 
       const mainColor = isShieldedNow
         ? '#f43f5e'
@@ -702,7 +817,7 @@
         ctx.font = '10px Consolas, monospace';
         ctx.fillText(
           isShieldedNow
-            ? 'SHIELD: COORDS NULLIFIED'
+            ? 'SIN DESPLEGAR // COORDS: NULL'
             : `${currentTarget.rawCiudad} (${currentTarget.rawLat.toFixed(2)}, ${currentTarget.rawLng.toFixed(2)})`,
           boxX + 8,
           boxY + 35
@@ -782,7 +897,8 @@
       let bestIdx = -1;
       let bestDist = 35;
       tacticalNodes.forEach((node, idx) => {
-        if (node.consentimiento === 'no' && tacticalPostEtlShieldMode) return;
+        if (node.consentimiento === 'no' && (tacticalPostEtlShieldMode || !node.hasPreEtlSample)) return;
+        if (node.rawLat === null || node.rawLng === null) return;
         const pt = latLngToCanvas(node.rawLat, node.rawLng, canvas.width, canvas.height);
         const dist = Math.hypot(pt.x - clickX, pt.y - clickY);
         if (dist < bestDist) {
@@ -901,6 +1017,17 @@
     document.getElementById('btnTacticalCycleTarget')?.addEventListener('click', () => {
       selectTacticalTarget(tacticalSelectedIdx + 1);
     });
+
+    document.querySelectorAll('.t-filter-btn[data-tfilter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.t-filter-btn[data-tfilter]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        tacticalTargetFilter = btn.getAttribute('data-tfilter');
+        renderTacticalTargetList();
+      });
+    });
+
+    document.getElementById('inputFilterAnonimos')?.addEventListener('input', renderAnonimosUnmappedTable);
   }
 
   // =========================================================
@@ -1281,7 +1408,7 @@
     const [histData, cuarentenaData, usersGeoData] = await Promise.all([
       apiFetch('/api/analytics/historical'),
       apiFetch('/api/cuarentena?limit=60'),
-      apiFetch('/api/usuarios?limit=45')
+      apiFetch('/api/usuarios?limit=150')
     ]);
 
     const intereses = histData.topIntereses || [];

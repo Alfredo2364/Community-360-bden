@@ -604,6 +604,11 @@
                   </div>
 
                   <div class="tactical-box-header" style="margin-top: 12px;">SELECCIÓN DE OBJETIVO</div>
+                  <div class="tactical-mini-filters">
+                    <button class="t-filter-btn active" data-tfilter="all">Todos</button>
+                    <button class="t-filter-btn" data-tfilter="deployed">En Mapa</button>
+                    <button class="t-filter-btn" data-tfilter="undeployed">Sin Desplegar</button>
+                  </div>
                   <div id="hudTargetSelectorList" class="tactical-target-list"></div>
                 </div>
 
@@ -666,18 +671,51 @@
               </div>
             </article>
 
-            <!-- COMPARATIVA JSON ANTES VS DESPUÉS DEBAJO DEL VISOR TÁCTICO -->
+            <!-- COMPARATIVA JSON ANTES VS DESPUÉS + LISTA DE ANÓNIMOS SIN DESPLEGAR -->
             <article class="panel-card">
               <div class="panel-header-flex">
                 <div>
-                  <h3>Cumplimiento de Anonimización Geográfica</h3>
+                  <h3>Cumplimiento de Anonimización Geográfica y Perfiles Sin Desplegar</h3>
                   <p class="panel-subtitle">
-                    Verificación de supresión de atributos de ubicación para usuarios sin consentimiento de geolocalización.
+                    Verificación de supresión de ubicación: los usuarios sin consentimiento tienen sus coordenadas en <code>NULL</code> y no se despliegan en el mapa satelital.
                   </p>
                 </div>
                 <span class="tag-pill privacy-alert">Política de Privacidad Activa</span>
               </div>
               <div id="privacyExampleBox" class="privacy-example-box"></div>
+
+              <div class="panel-header-flex" style="margin-top: 22px;">
+                <div>
+                  <h3>Padrón de Usuarios Anónimos (Sin Desplegar en el Mapa Geográfico)</h3>
+                  <p class="panel-subtitle">
+                    Registros con <code>consentimiento_datos = "no"</code> cuya geolocalización fue suprimida antes de almacenarse en la nube. Seleccione cualquiera para auditarlo en el visor orbital.
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  id="inputFilterAnonimos"
+                  class="compact-input"
+                  placeholder="Buscar usuario anónimo por ID o alias..."
+                  autocomplete="off"
+                />
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID Usuario</th>
+                      <th>Alias</th>
+                      <th>Plataforma</th>
+                      <th>Consentimiento</th>
+                      <th>País / Ciudad en BD</th>
+                      <th>Coordenadas (Lat / Lon)</th>
+                      <th>Estado en Mapa</th>
+                      <th>Auditoría</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tableAnonimosUnmappedBody"></tbody>
+                </table>
+              </div>
             </article>
           </div>
 
